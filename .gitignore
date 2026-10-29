@@ -1,0 +1,38 @@
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Sub-repositories
+/nrf52840-hms-firmware/
+/nrf52840-hms-cli/
+/nrf52840-hms-obsidian/
+
+# Agentic Plugins
+/agentic-coding-plugin/
+/agentic-triage-plugin/
+/agentic-investigate-plugin/
+/agentic-monitoring-plugin/
+
+# Private Cryptographic Keys (do NOT commit private keys)
+keys/*.pem
+!keys/*-pub.pem
+!keys/*.pub
+
+# Virtual Environment & West
+.venv/
+.west/
+zephyr/
+modules/
+bootloader/
+nrf/
+nrfxlib/
+tools/
+
+# Build artifacts
+build/
+build-*/
+bin/
+*.o
+*.elf
+*.bin
+*.hex
