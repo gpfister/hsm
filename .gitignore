@@ -8,10 +8,7 @@ Thumbs.db
 /nrf52840-hms-obsidian/
 
 # Agentic Plugins
-/agentic-coding-plugin/
-/agentic-triage-plugin/
-/agentic-investigate-plugin/
-/agentic-monitoring-plugin/
+/.agents/plugins/
 
 # Private Cryptographic Keys (do NOT commit private keys)
 keys/*.pem

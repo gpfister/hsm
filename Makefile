@@ -17,7 +17,9 @@ endif
 
 # Sub-repositories
 SUBREPOS := nrf52840-hms-firmware nrf52840-hms-cli nrf52840-hms-obsidian
-PLUGINS := agentic-coding-plugin agentic-investigate-plugin agentic-monitoring-plugin agentic-triage-plugin
+PLUGIN_DIR := .agents/plugins
+PLUGIN_NAMES := agentic-coding-plugin agentic-investigate-plugin agentic-monitoring-plugin agentic-triage-plugin
+PLUGINS := $(addprefix $(PLUGIN_DIR)/, $(PLUGIN_NAMES))
 ALL_REPOS := $(SUBREPOS) $(PLUGINS)
 
 .PHONY: help all sync clone pull fetch push status st diff clean distclean keys \
@@ -60,12 +62,14 @@ keys:
 
 clone:
 	@echo -e "\033[1;34m==> Checking and cloning missing repositories & plugins...\033[0m"
-	@for r in $(PLUGINS); do \
-		if [ ! -d "$$r/.git" ]; then \
-			echo -e "  \033[1;33mCloning plugin $$r from $(GIT_BASE_URL)/$$r.git...\033[0m"; \
-			git clone "$(GIT_BASE_URL)/$$r.git" "$$r" || echo "⚠️ Failed to clone $$r"; \
+	@mkdir -p $(PLUGIN_DIR)
+	@for p in $(PLUGIN_NAMES); do \
+		target="$(PLUGIN_DIR)/$$p"; \
+		if [ ! -d "$$target/.git" ]; then \
+			echo -e "  \033[1;33mCloning plugin $$p from $(GIT_BASE_URL)/$$p.git into $$target...\033[0m"; \
+			git clone "$(GIT_BASE_URL)/$$p.git" "$$target" || echo "⚠️ Failed to clone $$p"; \
 		else \
-			echo -e "  \033[0;32m✓\033[0m Plugin $$r ready."; \
+			echo -e "  \033[0;32m✓\033[0m Plugin $$p ready."; \
 		fi; \
 	done
 	@for r in $(SUBREPOS); do \
@@ -101,18 +105,18 @@ push:
 
 status st:
 	@echo -e "\033[1;34m==> Workspace Git Status Overview\033[0m"
-	@printf "%-30s %-20s %-15s\n" "Repository" "Branch" "Status"
-	@printf "%-30s %-20s %-15s\n" "------------------------------" "--------------------" "---------------"
+	@printf "%-35s %-20s %-15s\n" "Repository" "Branch" "Status"
+	@printf "%-35s %-20s %-15s\n" "-----------------------------------" "--------------------" "---------------"
 	@root_branch=$$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached"); \
 	root_status=$$(git status --porcelain 2>/dev/null | wc -l | tr -d ' '); \
 	if [ "$$root_status" -eq 0 ]; then rstat="\033[0;32mclean\033[0m"; else rstat="\033[0;31m$$root_status modified\033[0m"; fi; \
-	printf "%-30s %-20s %-25b\n" "root (workspace)" "$$root_branch" "$$rstat"
+	printf "%-35s %-20s %-25b\n" "root (workspace)" "$$root_branch" "$$rstat"
 	@for r in $(ALL_REPOS); do \
 		if [ -d "$$r/.git" ]; then \
 			b=$$(git -C "$$r" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached"); \
 			st=$$(git -C "$$r" status --porcelain 2>/dev/null | wc -l | tr -d ' '); \
 			if [ "$$st" -eq 0 ]; then stat_str="\033[0;32mclean\033[0m"; else stat_str="\033[0;31m$$st modified\033[0m"; fi; \
-			printf "%-30s %-20s %-25b\n" "$$r" "$$b" "$$stat_str"; \
+			printf "%-35s %-20s %-25b\n" "$$r" "$$b" "$$stat_str"; \
 		fi; \
 	done
 

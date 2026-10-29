@@ -16,10 +16,12 @@ ncs-nrf52840dongle-kms/
 ├── .gitignore                        # Global ignore (ignores subrepos and private keys)
 ├── keys/                             # Cryptographic signing keys (root-ec-p256.pem)
 ├── scripts/                          # Key generation and helper scripts
-├── agentic-coding-plugin/            # Cloned Antigravity coding companion plugin
-├── agentic-investigate-plugin/       # Cloned Antigravity issue investigation plugin
-├── agentic-monitoring-plugin/        # Cloned Antigravity monitoring surveillance plugin
-├── agentic-triage-plugin/            # Cloned Antigravity dynamic prompt triage plugin
+├── .agents/                          # Antigravity agent configuration and plugins
+│   └── plugins/                      # Cloned Antigravity companion plugins
+│       ├── agentic-coding-plugin/    # Coding companion plugin
+│       ├── agentic-investigate-plugin/# Issue investigation plugin
+│       ├── agentic-monitoring-plugin/# Monitoring surveillance plugin
+│       └── agentic-triage-plugin/    # Dynamic prompt triage plugin
 ├── nrf52840-hms-firmware/            # Git Repo: Zephyr / NCS firmware workspace
 ├── nrf52840-hms-cli/                 # Git Repo: Cross-platform Go CLI (`hmsutil`)
 └── nrf52840-hms-obsidian/            # Git Repo: Obsidian documentation vault
