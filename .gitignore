@@ -6,6 +6,7 @@ Thumbs.db
 /nrf52840-hsm-firmware/
 /nrf52840-hsm-cli/
 /nrf52840-hsm-obsidian/
+/nrf52840-hsm-libpkcs11/
 
 # Agentic Plugins
 /.agents/plugins/

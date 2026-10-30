@@ -24,6 +24,7 @@ ncs-nrf52840dongle-kms/
 │       └── agentic-triage-plugin/    # Dynamic prompt triage plugin
 ├── nrf52840-hsm-firmware/            # Git Repo: Zephyr / NCS firmware workspace
 ├── nrf52840-hsm-cli/                 # Git Repo: Cross-platform Go CLI (`hsmutil`)
+├── nrf52840-hsm-libpkcs11/           # Git Repo: PKCS#11 v2.40 shared library provider
 └── nrf52840-hsm-obsidian/            # Git Repo: Obsidian documentation vault
 ```
 
@@ -62,6 +63,13 @@ ncs-nrf52840dongle-kms/
 - Follows wikilink conventions (`[[Note Name]]`), YAML frontmatter (`title`, `tags`, `created`), and Mermaid architecture diagrams.
 - Stores architecture specs, protocols, session transcripts, and planning roadmaps.
 
+### 2.4 PKCS#11 Shared Library Provider (`nrf52840-hsm-libpkcs11`)
+- **Library**: `libnrf52840_pkcs11.dylib` (macOS), `libnrf52840_pkcs11.so` (Linux), `libnrf52840_pkcs11.dll` (Windows).
+- **Standard**: Cryptoki v2.40 specification.
+- **Transport**: AT-style ASCII serial protocol communicating with dongle CDC-ACM UART1 interface (`0x1209:0x0001`) or virtual mock PTY (`/tmp/mock-hsm-pty`).
+- **Cryptographic Mechanisms**: `CKM_EC_KEY_PAIR_GEN`, `CKM_ECDSA`, `CKM_ECDSA_SHA256` (SECP256R1 / prime256v1).
+- **Tooling Compatibility**: Direct compatibility with OpenSC `pkcs11-tool`, OpenSSL 3 `pkcs11-provider`, and OpenSSH.
+
 ---
 
 ## 3. Automation Commands (Root Makefile)
@@ -78,4 +86,9 @@ ncs-nrf52840dongle-kms/
 | `make firmware-monitor`| Connects to firmware console USB port |
 | `make cli-build` | Builds `hsmutil` for current host |
 | `make cli-build-all` | Cross-compiles `hsmutil` for all 5 target architectures |
+| `make libpkcs11-build` | Builds PKCS#11 shared provider library via CMake |
+| `make libpkcs11-test` | Runs PKCS#11 unit and interface test suite |
+| `make libpkcs11-clean` | Cleans PKCS#11 build artifacts |
+| `make integration-test`| Runs end-to-end integration tests using virtual mock PTY |
+| `make integration-test-hw`| Runs integration tests against physical connected Dongle |
 | `make clean` | Cleans build artifacts |

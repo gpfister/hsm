@@ -16,10 +16,11 @@ GIT_BASE_URL := https://github.com/$(GITHUB_ORG)
 endif
 
 # Sub-repositories
-SUBREPOS := nrf52840-hsm-firmware nrf52840-hsm-cli nrf52840-hsm-obsidian
+SUBREPOS := nrf52840-hsm-firmware nrf52840-hsm-cli nrf52840-hsm-obsidian nrf52840-hsm-libpkcs11
 FIRMWARE_DIR := nrf52840-hsm-firmware
 CLI_DIR := nrf52840-hsm-cli
 OBSIDIAN_DIR := nrf52840-hsm-obsidian
+LIBPKCS11_DIR := nrf52840-hsm-libpkcs11
 CLI_BIN := $(CLI_DIR)/bin/hsmutil
 PLUGIN_DIR := .agents/plugins
 PLUGIN_NAMES := agentic-coding-plugin agentic-investigate-plugin agentic-monitoring-plugin agentic-triage-plugin
@@ -28,7 +29,9 @@ ALL_REPOS := $(SUBREPOS) $(PLUGINS)
 
 .PHONY: help all sync clone pull fetch push status st diff clean distclean keys \
         firmware-init firmware-sync firmware-build firmware-build-debug firmware-flash firmware-monitor firmware-clean firmware-distclean \
-        cli-build cli-build-all cli-test cli-clean
+        cli-build cli-build-all cli-test cli-clean \
+        libpkcs11-build libpkcs11-test libpkcs11-clean \
+        integration-test integration-test-hw
 
 help:
 	@echo "=================================================================="
@@ -59,6 +62,16 @@ help:
 	@echo "  make cli-build           Build 'hsmutil' for host"
 	@echo "  make cli-build-all       Cross-compile 'hsmutil' for macOS, Linux, Windows"
 	@echo "  make cli-test            Run Go tests for 'hsmutil'"
+	@echo "  make cli-clean           Clean CLI build outputs"
+	@echo ""
+	@echo "PKCS#11 Provider Targets:"
+	@echo "  make libpkcs11-build     Build PKCS#11 shared library (Release)"
+	@echo "  make libpkcs11-test      Run CTest unit tests for PKCS#11 provider"
+	@echo "  make libpkcs11-clean     Clean PKCS#11 build artifacts"
+	@echo ""
+	@echo "Integration Test Targets:"
+	@echo "  make integration-test    Run automated integration tests using mock PTY"
+	@echo "  make integration-test-hw Run integration tests on physical connected Dongle"
 	@echo "=================================================================="
 
 keys:
@@ -172,5 +185,22 @@ cli-test:
 cli-clean:
 	@$(MAKE) -C $(CLI_DIR) clean
 
-clean: firmware-clean cli-clean
-distclean: firmware-distclean cli-clean
+# PKCS#11 Provider forwards
+libpkcs11-build:
+	@$(MAKE) -C $(LIBPKCS11_DIR) build
+
+libpkcs11-test:
+	@$(MAKE) -C $(LIBPKCS11_DIR) test
+
+libpkcs11-clean:
+	@$(MAKE) -C $(LIBPKCS11_DIR) clean
+
+# Integration test harness
+integration-test:
+	@./scripts/run_integration_tests.sh
+
+integration-test-hw:
+	@TARGET_HW=1 ./scripts/run_integration_tests.sh
+
+clean: firmware-clean cli-clean libpkcs11-clean
+distclean: firmware-distclean cli-clean libpkcs11-clean
