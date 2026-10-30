@@ -3,9 +3,9 @@
 Thumbs.db
 
 # Sub-repositories
-/nrf52840-hms-firmware/
-/nrf52840-hms-cli/
-/nrf52840-hms-obsidian/
+/nrf52840-hsm-firmware/
+/nrf52840-hsm-cli/
+/nrf52840-hsm-obsidian/
 
 # Agentic Plugins
 /.agents/plugins/

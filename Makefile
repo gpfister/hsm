@@ -16,7 +16,11 @@ GIT_BASE_URL := https://github.com/$(GITHUB_ORG)
 endif
 
 # Sub-repositories
-SUBREPOS := nrf52840-hms-firmware nrf52840-hms-cli nrf52840-hms-obsidian
+SUBREPOS := nrf52840-hsm-firmware nrf52840-hsm-cli nrf52840-hsm-obsidian
+FIRMWARE_DIR := nrf52840-hsm-firmware
+CLI_DIR := nrf52840-hsm-cli
+OBSIDIAN_DIR := nrf52840-hsm-obsidian
+CLI_BIN := $(CLI_DIR)/bin/hsmutil
 PLUGIN_DIR := .agents/plugins
 PLUGIN_NAMES := agentic-coding-plugin agentic-investigate-plugin agentic-monitoring-plugin agentic-triage-plugin
 PLUGINS := $(addprefix $(PLUGIN_DIR)/, $(PLUGIN_NAMES))
@@ -52,9 +56,9 @@ help:
 	@echo "  make firmware-distclean  Distclean firmware (builds, Zephyr modules, .venv)"
 	@echo ""
 	@echo "CLI Targets:"
-	@echo "  make cli-build           Build 'hmsutil' for host"
-	@echo "  make cli-build-all       Cross-compile 'hmsutil' for macOS, Linux, Windows"
-	@echo "  make cli-test            Run Go tests for 'hmsutil'"
+	@echo "  make cli-build           Build 'hsmutil' for host"
+	@echo "  make cli-build-all       Cross-compile 'hsmutil' for macOS, Linux, Windows"
+	@echo "  make cli-test            Run Go tests for 'hsmutil'"
 	@echo "=================================================================="
 
 keys:
@@ -132,41 +136,41 @@ sync: clone pull status
 
 # Firmware forwards
 firmware-init: keys
-	@$(MAKE) -C nrf52840-hms-firmware init
+	@$(MAKE) -C $(FIRMWARE_DIR) init
 
 firmware-sync:
-	@$(MAKE) -C nrf52840-hms-firmware sync
+	@$(MAKE) -C $(FIRMWARE_DIR) sync
 
 firmware-build: keys
-	@$(MAKE) -C nrf52840-hms-firmware build-prod
+	@$(MAKE) -C $(FIRMWARE_DIR) build-prod
 
 firmware-build-debug: keys
-	@$(MAKE) -C nrf52840-hms-firmware build-debug
+	@$(MAKE) -C $(FIRMWARE_DIR) build-debug
 
 firmware-flash:
-	@$(MAKE) -C nrf52840-hms-firmware flash
+	@$(MAKE) -C $(FIRMWARE_DIR) flash
 
 firmware-monitor:
-	@$(MAKE) -C nrf52840-hms-firmware monitor
+	@$(MAKE) -C $(FIRMWARE_DIR) monitor
 
 firmware-clean:
-	@$(MAKE) -C nrf52840-hms-firmware clean
+	@$(MAKE) -C $(FIRMWARE_DIR) clean
 
 firmware-distclean:
-	@$(MAKE) -C nrf52840-hms-firmware distclean
+	@$(MAKE) -C $(FIRMWARE_DIR) distclean
 
 # CLI forwards
 cli-build:
-	@$(MAKE) -C nrf52840-hms-cli build
+	@$(MAKE) -C $(CLI_DIR) build
 
 cli-build-all:
-	@$(MAKE) -C nrf52840-hms-cli build-all
+	@$(MAKE) -C $(CLI_DIR) build-all
 
 cli-test:
-	@$(MAKE) -C nrf52840-hms-cli test
+	@$(MAKE) -C $(CLI_DIR) test
 
 cli-clean:
-	@$(MAKE) -C nrf52840-hms-cli clean
+	@$(MAKE) -C $(CLI_DIR) clean
 
 clean: firmware-clean cli-clean
 distclean: firmware-distclean cli-clean

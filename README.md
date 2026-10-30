@@ -4,9 +4,9 @@ Multi-repo workspace for building a Hardware Security Module (HSM) on an **nRF52
 
 ## Sub-Repositories
 
-- **[`nrf52840-hms-firmware/`](file:///Users/gpfister/Development/Projects/gpfister/ncs-nrf52840dongle-kms/nrf52840-hms-firmware)**: NCS/Zephyr firmware workspace with dual-stage B0 + MCUboot secure boot, dual USB CDC ACM (console & HSM), RGB status LED, and pure HSM logic library.
-- **[`nrf52840-hms-cli/`](file:///Users/gpfister/Development/Projects/gpfister/ncs-nrf52840dongle-kms/nrf52840-hms-cli)**: Cross-platform Go CLI & TUI executable `hmsutil` with `firmware update`, `firmware info`, BubbleTea interactive dashboard, and automated tests.
-- **[`nrf52840-hms-obsidian/`](file:///Users/gpfister/Development/Projects/gpfister/ncs-nrf52840dongle-kms/nrf52840-hms-obsidian)**: Project-wide documentation vault with architecture specifications, protocols, and sessions.
+- **[`nrf52840-hsm-firmware/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/nrf52840-hsm-firmware)**: NCS/Zephyr firmware workspace with dual-stage B0 + MCUboot secure boot, dual USB CDC ACM (console & HSM), RGB status LED, and pure HSM logic library.
+- **[`nrf52840-hsm-cli/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/nrf52840-hsm-cli)**: Cross-platform Go CLI & TUI executable `hsmutil` with `firmware update`, `firmware info`, BubbleTea interactive dashboard, and automated tests.
+- **[`nrf52840-hsm-obsidian/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/nrf52840-hsm-obsidian)**: Project-wide documentation vault with architecture specifications, protocols, and sessions.
 
 ## Quick Start
 

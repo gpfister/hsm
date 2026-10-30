@@ -1,6 +1,6 @@
-# AGENTS.md — nRF52840 Dongle HMS Workspace Coordinator
+# AGENTS.md — nRF52840 Dongle HSM Workspace Coordinator
 
-Welcome to the **ncs-nrf52840dongle-kms** workspace. This repository coordinates an open-source, dual-stage secure boot Hardware Security Module (HSM) on an nRF52840 USB Dongle (`PCA10059`), compatible with the YubiHSM 2 API. It brings together firmware built with the nRF Connect SDK (NCS), a cross-platform Go CLI/TUI (`hmsutil`), an Obsidian knowledge vault, and Antigravity plugins.
+Welcome to the **ncs-nrf52840dongle-kms** workspace. This repository coordinates an open-source, dual-stage secure boot Hardware Security Module (HSM) on an nRF52840 USB Dongle (`PCA10059`), compatible with the YubiHSM 2 API. It brings together firmware built with the nRF Connect SDK (NCS), a cross-platform Go CLI/TUI (`hsmutil`), an Obsidian knowledge vault, and Antigravity plugins.
 
 ---
 
@@ -22,16 +22,16 @@ ncs-nrf52840dongle-kms/
 │       ├── agentic-investigate-plugin/# Issue investigation plugin
 │       ├── agentic-monitoring-plugin/# Monitoring surveillance plugin
 │       └── agentic-triage-plugin/    # Dynamic prompt triage plugin
-├── nrf52840-hms-firmware/            # Git Repo: Zephyr / NCS firmware workspace
-├── nrf52840-hms-cli/                 # Git Repo: Cross-platform Go CLI (`hmsutil`)
-└── nrf52840-hms-obsidian/            # Git Repo: Obsidian documentation vault
+├── nrf52840-hsm-firmware/            # Git Repo: Zephyr / NCS firmware workspace
+├── nrf52840-hsm-cli/                 # Git Repo: Cross-platform Go CLI (`hsmutil`)
+└── nrf52840-hsm-obsidian/            # Git Repo: Obsidian documentation vault
 ```
 
 ---
 
 ## 2. Subsystem Summary
 
-### 2.1 Firmware (`nrf52840-hms-firmware`)
+### 2.1 Firmware (`nrf52840-hsm-firmware`)
 - **Framework**: nRF Connect SDK v3.4.1 / Zephyr RTOS with sysbuild.
 - **Target Board**: `nrf52840dongle/nrf52840` (`PCA10059`).
 - **Secure Boot**:
@@ -47,17 +47,17 @@ ncs-nrf52840dongle-kms/
 - **Core Library (`firmware/lib`)**:
   - Decoupled, pure HSM logic implementing the YubiHSM 2 protocol packet framing, command dispatch, session cryptography, and storage abstraction.
 
-### 2.2 CLI (`nrf52840-hms-cli`)
-- **Executable**: `hmsutil`.
+### 2.2 CLI (`nrf52840-hsm-cli`)
+- **Executable**: `hsmutil`.
 - **Framework**: Go 1.24+ with Cobra and BubbleTea following Clean Architecture.
 - **Key Capabilities**:
-  - `hmsutil firmware info`: Display active firmware version and bootloader status.
-  - `hmsutil firmware update --file <path>`: Chunked streaming upload to candidate partition slot.
-  - `hmsutil info`, `hmsutil echo`, `hmsutil auth`, `hmsutil lock`, `hmsutil reset`.
-  - `hmsutil tui`: Interactive terminal dashboard.
+  - `hsmutil firmware info`: Display active firmware version and bootloader status.
+  - `hsmutil firmware update --file <path>`: Chunked streaming upload to candidate partition slot.
+  - `hsmutil info`, `hsmutil echo`, `hsmutil auth`, `hsmutil lock`, `hsmutil reset`.
+  - `hsmutil tui`: Interactive terminal dashboard.
 - **Cross-Platform**: Builds on macOS (arm64), Linux (arm64/amd64), and Windows (arm64/amd64) via pure-Go serial I/O.
 
-### 2.3 Documentation (`nrf52840-hms-obsidian`)
+### 2.3 Documentation (`nrf52840-hsm-obsidian`)
 - Centralized Obsidian markdown vault.
 - Follows wikilink conventions (`[[Note Name]]`), YAML frontmatter (`title`, `tags`, `created`), and Mermaid architecture diagrams.
 - Stores architecture specs, protocols, session transcripts, and planning roadmaps.
@@ -76,6 +76,6 @@ ncs-nrf52840dongle-kms/
 | `make firmware-build` | Builds production and debug firmware |
 | `make firmware-flash` | Programs device using J-Link `802007333` |
 | `make firmware-monitor`| Connects to firmware console USB port |
-| `make cli-build` | Builds `hmsutil` for current host |
-| `make cli-build-all` | Cross-compiles `hmsutil` for all 5 target architectures |
+| `make cli-build` | Builds `hsmutil` for current host |
+| `make cli-build-all` | Cross-compiles `hsmutil` for all 5 target architectures |
 | `make clean` | Cleans build artifacts |
