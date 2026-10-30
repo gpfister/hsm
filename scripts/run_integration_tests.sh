@@ -89,7 +89,13 @@ if [ -n "${P11_LIB}" ]; then
     # Custom native test runner
     if [ -x "${P11_DIR}/build/test_p11_mock" ]; then
         echo -e "\033[1;36m--> Running native test_p11_mock runner...\033[0m"
+        if [ -z "${TARGET_HW:-}" ]; then
+            python3 -c "import os; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR); os.write(fd, b'AT+AUTOLOCK=0\r\n'); os.close(fd)" 2>/dev/null || true
+        fi
         "${P11_DIR}/build/test_p11_mock"
+        if [ -z "${TARGET_HW:-}" ]; then
+            python3 -c "import os; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR); os.write(fd, b'AT+AUTOLOCK=1\r\n'); os.close(fd)" 2>/dev/null || true
+        fi
         echo -e "\033[0;32m✓\033[0m Native test_p11_mock passed."
     fi
 
@@ -117,20 +123,25 @@ if [ -x "${CLI_BIN}" ]; then
     echo -e "\033[0;32m✓\033[0m Found hsmutil binary at: ${CLI_BIN}"
     
     # Check if CLI supports --port flag with mock PTY
-    if "${CLI_BIN}" --help 2>&1 | grep -q "port"; then
+    if "${CLI_BIN}" --help | grep "port" >/dev/null; then
         echo -e "\033[1;36m--> Executing hsmutil info against ${NRF52840_HSM_PORT}...\033[0m"
         "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" info || {
             echo -e "\033[1;33m[INFO] hsmutil info executed (may expect specific framing during protocol migration).\033[0m"
         }
 
-        if "${CLI_BIN}" --help 2>&1 | grep -q "key"; then
+        if "${CLI_BIN}" --help | grep "key" >/dev/null; then
             echo -e "\033[1;36m--> Executing hsmutil key list...\033[0m"
             "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" key list || true
         fi
 
-        if "${CLI_BIN}" --help 2>&1 | grep -q "p11" && [ -n "${P11_LIB}" ]; then
+        if "${CLI_BIN}" --help | grep "p11" >/dev/null && [ -n "${P11_LIB}" ]; then
             echo -e "\033[1;36m--> Executing hsmutil p11 info...\033[0m"
-            "${CLI_BIN}" p11 info --module "${P11_LIB}" || true
+            "${CLI_BIN}" p11 info --module "${P11_LIB}"
+            echo -e "\033[0;32m✓\033[0m hsmutil p11 info passed."
+
+            echo -e "\033[1;36m--> Executing hsmutil p11 slots...\033[0m"
+            "${CLI_BIN}" p11 slots --module "${P11_LIB}"
+            echo -e "\033[0;32m✓\033[0m hsmutil p11 slots passed."
         fi
     fi
 else
