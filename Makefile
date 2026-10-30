@@ -22,10 +22,7 @@ CLI_DIR := nrf52840-hsm-cli
 OBSIDIAN_DIR := nrf52840-hsm-obsidian
 LIBPKCS11_DIR := nrf52840-hsm-libpkcs11
 CLI_BIN := $(CLI_DIR)/bin/hsmutil
-PLUGIN_DIR := .agents/plugins
-PLUGIN_NAMES := agentic-coding-plugin agentic-investigate-plugin agentic-monitoring-plugin agentic-triage-plugin
-PLUGINS := $(addprefix $(PLUGIN_DIR)/, $(PLUGIN_NAMES))
-ALL_REPOS := $(SUBREPOS) $(PLUGINS)
+ALL_REPOS := $(SUBREPOS)
 
 .PHONY: help all sync clone pull fetch push status st diff clean distclean keys \
         firmware-init firmware-sync firmware-build firmware-build-debug firmware-flash firmware-monitor firmware-clean firmware-distclean \
@@ -78,17 +75,7 @@ keys:
 	@./scripts/generate_keys.sh
 
 clone:
-	@echo -e "\033[1;34m==> Checking and cloning missing repositories & plugins...\033[0m"
-	@mkdir -p $(PLUGIN_DIR)
-	@for p in $(PLUGIN_NAMES); do \
-		target="$(PLUGIN_DIR)/$$p"; \
-		if [ ! -d "$$target/.git" ]; then \
-			echo -e "  \033[1;33mCloning plugin $$p from $(GIT_BASE_URL)/$$p.git into $$target...\033[0m"; \
-			git clone "$(GIT_BASE_URL)/$$p.git" "$$target" || echo "⚠️ Failed to clone $$p"; \
-		else \
-			echo -e "  \033[0;32m✓\033[0m Plugin $$p ready."; \
-		fi; \
-	done
+	@echo -e "\033[1;34m==> Checking and cloning missing repositories...\033[0m"
 	@for r in $(SUBREPOS); do \
 		if [ ! -d "$$r/.git" ]; then \
 			echo -e "  \033[1;33mSubrepo $$r not yet cloned or initialized.\033[0m"; \

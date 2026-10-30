@@ -188,7 +188,7 @@ def run_dual_device_migration_test(source_fd, script_dir: str) -> bool:
                 pass
 
 
-def run_tests(port_path: str) -> bool:
+def run_tests(port_path: str, skip_migration: bool = False) -> bool:
     print(f"==================================================")
     print(f"[TEST RUNNER] Connecting to HSM port: {port_path}")
     print(f"==================================================")
@@ -458,15 +458,19 @@ def run_tests(port_path: str) -> bool:
                 print(f"  [PASS] OpenSSL pkeyutl verified signature: {proc.stdout.strip()}")
 
         # 12. Dual-Device Blind Migration Handshake
-        print("  [12/12] Testing dual-device blind migration handshake (ECDH + AES-256-GCM)...")
-        if not run_dual_device_migration_test(fd, script_dir):
-            print("  [FAIL] Dual-device migration handshake failed.")
-            return False
-        print("  [PASS] Dual-device blind migration completed: target private key verified via signature.")
+        if skip_migration:
+            print("  [12/12] [SKIPPED] Skipping dual-device blind migration scenario as requested.")
+        else:
+            print("  [12/12] Testing dual-device blind migration handshake (ECDH + AES-256-GCM)...")
+            if not run_dual_device_migration_test(fd, script_dir):
+                print("  [FAIL] Dual-device migration handshake failed.")
+                return False
+            print("  [PASS] Dual-device blind migration completed: target private key verified via signature.")
 
         print("==================================================")
-        print("[SUCCESS] All AT Protocol, Ceremony, & Migration checks passed!")
+        print("[SUCCESS] All AT Protocol & Ceremony checks passed!")
         print("==================================================")
+        send_and_receive(fd, "AT+LOCK")
         return True
 
     finally:
@@ -476,9 +480,10 @@ def run_tests(port_path: str) -> bool:
 def main():
     parser = argparse.ArgumentParser(description="AT Protocol Test Runner")
     parser.add_argument("--port", default=os.environ.get("NRF52840_HSM_PORT", "/tmp/mock-hsm-pty"))
+    parser.add_argument("--skip-migration", action="store_true", help="Skip dual-device blind migration scenario")
     args = parser.parse_args()
 
-    success = run_tests(args.port)
+    success = run_tests(args.port, skip_migration=args.skip_migration)
     sys.exit(0 if success else 1)
 
 

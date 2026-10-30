@@ -70,7 +70,11 @@ fi
 # 2. Test AT Protocol & Cryptographic Engine
 # ------------------------------------------------------------------------------
 echo -e "\n\033[1;34m==> [Phase A] Testing AT ASCII Protocol & Cryptographic Engine...\033[0m"
-python3 "${SCRIPT_DIR}/test_at_client.py" --port "${NRF52840_HSM_PORT}"
+EXTRA_TEST_ARGS=""
+if [ -n "${SKIP_MIGRATION:-}" ] || [ "${1:-}" = "--skip-migration" ]; then
+    EXTRA_TEST_ARGS="--skip-migration"
+fi
+python3 "${SCRIPT_DIR}/test_at_client.py" --port "${NRF52840_HSM_PORT}" ${EXTRA_TEST_ARGS}
 
 # ------------------------------------------------------------------------------
 # 3. Test PKCS#11 Dynamic Shared Library (if built)
@@ -89,6 +93,7 @@ if [ -n "${P11_LIB}" ]; then
     # Custom native test runner
     if [ -x "${P11_DIR}/build/test_p11_mock" ]; then
         echo -e "\033[1;36m--> Running native test_p11_mock runner...\033[0m"
+        python3 -c "import os, time; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR | os.O_NONBLOCK); os.write(fd, b'AT+LOCK\r\n'); time.sleep(0.05); os.close(fd)" 2>/dev/null || true
         if [ -z "${TARGET_HW:-}" ]; then
             python3 -c "import os; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR); os.write(fd, b'AT+AUTOLOCK=0\r\n'); os.close(fd)" 2>/dev/null || true
         fi

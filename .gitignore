@@ -8,8 +8,6 @@ Thumbs.db
 /nrf52840-hsm-obsidian/
 /nrf52840-hsm-libpkcs11/
 
-# Agentic Plugins
-/.agents/plugins/
 
 # Private Cryptographic Keys (do NOT commit private keys)
 keys/*.pem

@@ -16,12 +16,8 @@ ncs-nrf52840dongle-kms/
 ├── .gitignore                        # Global ignore (ignores subrepos and private keys)
 ├── keys/                             # Cryptographic signing keys (root-ec-p256.pem)
 ├── scripts/                          # Key generation and helper scripts
-├── .agents/                          # Antigravity agent configuration and plugins
-│   └── plugins/                      # Cloned Antigravity companion plugins
-│       ├── agentic-coding-plugin/    # Coding companion plugin
-│       ├── agentic-investigate-plugin/# Issue investigation plugin
-│       ├── agentic-monitoring-plugin/# Monitoring surveillance plugin
-│       └── agentic-triage-plugin/    # Dynamic prompt triage plugin
+├── .agents/                          # Antigravity agent configuration
+│   └── plugins.json                  # References companion plugins in ../agentic/
 ├── nrf52840-hsm-firmware/            # Git Repo: Zephyr / NCS firmware workspace
 ├── nrf52840-hsm-cli/                 # Git Repo: Cross-platform Go CLI (`hsmutil`)
 ├── nrf52840-hsm-libpkcs11/           # Git Repo: PKCS#11 v2.40 shared library provider
