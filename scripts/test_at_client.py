@@ -207,7 +207,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
 
     try:
         # 1. AT Ping
-        print("  [1/12] Testing AT link ping...")
+        print("  [1/13] Testing AT link ping...")
         resp = send_and_receive(fd, "AT")
         if "OK" not in resp:
             print(f"  [FAIL] AT ping failed. Got: {resp!r}")
@@ -215,7 +215,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print("  [PASS] AT -> OK")
 
         # 2. AT+INFO?
-        print("  [2/12] Testing AT+INFO? query...")
+        print("  [2/13] Testing AT+INFO? query...")
         resp = send_and_receive(fd, "AT+INFO?")
         if "+INFO:" not in resp or "OK" not in resp:
             print(f"  [FAIL] AT+INFO? failed. Got: {resp!r}")
@@ -223,7 +223,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print(f"  [PASS] {resp.strip()}")
 
         # 3. AT+STATUS?
-        print("  [3/12] Testing AT+STATUS? query...")
+        print("  [3/13] Testing AT+STATUS? query...")
         resp = send_and_receive(fd, "AT+STATUS?")
         if "+STATUS:" not in resp or "OK" not in resp:
             print(f"  [FAIL] AT+STATUS? failed. Got: {resp!r}")
@@ -231,7 +231,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print(f"  [PASS] {resp.strip()}")
 
         # 4. Auth & Lockout Check
-        print("  [4/12] Testing authentication & error handling...")
+        print("  [4/13] Testing authentication & error handling...")
         resp = send_and_receive(fd, "AT+RESET")
         if "OK" not in resp:
             print(f"  [FAIL] AT+RESET failed. Got: {resp!r}")
@@ -257,7 +257,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print("  [PASS] PIN authentication succeeded and unlocked session.")
 
         # 5. Shamir 3-of-5 Threshold Initialization (AT+INIT=1)
-        print("  [5/12] Testing Shamir threshold initialization (AT+INIT=1)...")
+        print("  [5/13] Testing Shamir threshold initialization (AT+INIT=1)...")
         resp = send_and_receive(fd, "AT+INIT=1")
         if "+INIT: 1," not in resp or "OK" not in resp:
             print(f"  [FAIL] AT+INIT=1 failed. Got: {resp!r}")
@@ -288,7 +288,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print(f"  [PASS] 5 Shamir shares generated (3-of-5 threshold) over GF(256).")
 
         # 6. Duplicate Share Rejection Verification (+CME ERROR: 103)
-        print("  [6/12] Testing duplicate share rejection (+CME ERROR: 103)...")
+        print("  [6/13] Testing duplicate share rejection (+CME ERROR: 103)...")
         # Submit share 1
         resp = send_and_receive(fd, f"AT+SHARE=1,{shares[1]}")
         if "+SHARE: 1/3 ACCEPTED" not in resp or "OK" not in resp:
@@ -303,7 +303,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print("  [PASS] Duplicate share presentation rejected (+CME ERROR: 103).")
 
         # 7. Custodian Turn-by-Turn Entry, Quorum Unlock, and Ephemeral Word Commitment
-        print("  [7/12] Testing turn-by-turn share submission, quorum unlock, & BIP-39 word commitment...")
+        print("  [7/13] Testing turn-by-turn share submission, quorum unlock, & BIP-39 word commitment...")
         words = []
         if 'WORD="' in resp:
             words.append(resp.split('WORD="')[1].split('"')[0])
@@ -346,7 +346,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
             print("  [PASS] 3-of-5 Quorum unlocked session.")
 
         # 8. Keypair Generation & Auto Self-Lock State Assertion
-        print("  [8/12] Testing keypair generation (AT+KEYGEN=2,EC_P256) & auto self-lock assertion...")
+        print("  [8/13] Testing keypair generation (AT+KEYGEN=2,EC_P256) & auto self-lock assertion...")
         resp = send_and_receive(fd, "AT+KEYGEN=2,EC_P256")
         if "+KEYGEN: 2,PUB=\"" not in resp or "OK" not in resp:
             print(f"  [FAIL] Keygen failed. Got: {resp!r}")
@@ -372,7 +372,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print(f"  [PASS] Key generated and device automatically self-locked (+CME ERROR: 1 verified).")
 
         # 9. Public Key Readout (AT+PUBKEY=2) & Re-auth
-        print("  [9/12] Testing public key readout (AT+PUBKEY=2)...")
+        print("  [9/13] Testing public key readout (AT+PUBKEY=2)...")
         resp = send_and_receive(fd, "AT+PUBKEY=2")
         if pub_hex not in resp or "OK" not in resp:
             print(f"  [FAIL] AT+PUBKEY did not match generated public key. Got: {resp!r}")
@@ -380,7 +380,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print("  [PASS] Public key matches generated point.")
 
         # 10. TRNG Random Bytes (AT+RANDOM=32)
-        print("  [10/12] Testing TRNG random bytes (AT+RANDOM=32)...")
+        print("  [10/13] Testing TRNG random bytes (AT+RANDOM=32)...")
         resp = send_and_receive(fd, "AT+RANDOM=32")
         if "+RANDOM:" not in resp or "OK" not in resp:
             print(f"  [FAIL] Random generation failed. Got: {resp!r}")
@@ -392,7 +392,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print(f"  [PASS] Random 32 bytes: {rand_hex[:16]}...")
 
         # 11. ECDSA Signing & Cryptographic Verification
-        print("  [11/12] Testing ECDSA signing & verification post re-auth...")
+        print("  [11/13] Testing ECDSA signing & verification post re-auth...")
         # Re-authenticate to sign
         auth_resp = send_and_receive(fd, "AT+AUTH=123456")
         if "OK" not in auth_resp:
@@ -459,13 +459,71 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
 
         # 12. Dual-Device Blind Migration Handshake
         if skip_migration:
-            print("  [12/12] [SKIPPED] Skipping dual-device blind migration scenario as requested.")
+            print("  [12/13] [SKIPPED] Skipping dual-device blind migration scenario as requested.")
         else:
-            print("  [12/12] Testing dual-device blind migration handshake (ECDH + AES-256-GCM)...")
+            print("  [12/13] Testing dual-device blind migration handshake (ECDH + AES-256-GCM)...")
             if not run_dual_device_migration_test(fd, script_dir):
                 print("  [FAIL] Dual-device migration handshake failed.")
                 return False
             print("  [PASS] Dual-device blind migration completed: target private key verified via signature.")
+
+        # 13. Factory Reset & Keystore Zeroization Verification (AT+RESET / AT+FACTORYRESET)
+        print("  [13/13] Testing factory reset zeroization (AT+RESET / AT+FACTORYRESET)...")
+        # Ensure session is authenticated and generate key in slot 1
+        send_and_receive(fd, "AT+AUTH=123456")
+        send_and_receive(fd, "AT+KEYGEN=1,EC_P256")
+        send_and_receive(fd, "AT+AUTH=123456")
+
+        # Verify slot 1 has a key
+        pubkey_pre = send_and_receive(fd, "AT+PUBKEY=1")
+        if "+PUBKEY: 1," not in pubkey_pre:
+            print(f"  [FAIL] Failed to populate slot 1 before reset test: {pubkey_pre!r}")
+            return False
+
+        # Verify AT+RESET zeroizes slot store
+        reset_resp = send_and_receive(fd, "AT+RESET")
+        if "OK" not in reset_resp:
+            print(f"  [FAIL] AT+RESET failed. Got: {reset_resp!r}")
+            return False
+
+        # Query AT+STATUS? and assert AUTH=0 and KEYCOUNT=0
+        status_resp = send_and_receive(fd, "AT+STATUS?")
+        if "+STATUS:" not in status_resp or "AUTH=0" not in status_resp or "KEYCOUNT=0" not in status_resp:
+            print(f"  [FAIL] AT+STATUS? after AT+RESET expected AUTH=0 and KEYCOUNT=0. Got: {status_resp!r}")
+            return False
+
+        # Query AT+PUBKEY=1 and assert rejection / error
+        pubkey_post = send_and_receive(fd, "AT+PUBKEY=1")
+        if "+CME ERROR:" not in pubkey_post and "ERROR" not in pubkey_post:
+            print(f"  [FAIL] AT+PUBKEY=1 after reset did not return error: {pubkey_post!r}")
+            return False
+
+        # Verify AT+FACTORYRESET alias works identically
+        send_and_receive(fd, "AT+AUTH=123456")
+        send_and_receive(fd, "AT+KEYGEN=1,EC_P256")
+        send_and_receive(fd, "AT+AUTH=123456")
+
+        pubkey_pre_fr = send_and_receive(fd, "AT+PUBKEY=1")
+        if "+PUBKEY: 1," not in pubkey_pre_fr:
+            print(f"  [FAIL] Failed to populate slot 1 before AT+FACTORYRESET: {pubkey_pre_fr!r}")
+            return False
+
+        freset_resp = send_and_receive(fd, "AT+FACTORYRESET")
+        if "OK" not in freset_resp:
+            print(f"  [FAIL] AT+FACTORYRESET failed. Got: {freset_resp!r}")
+            return False
+
+        status_resp_fr = send_and_receive(fd, "AT+STATUS?")
+        if "+STATUS:" not in status_resp_fr or "AUTH=0" not in status_resp_fr or "KEYCOUNT=0" not in status_resp_fr:
+            print(f"  [FAIL] AT+STATUS? after AT+FACTORYRESET expected AUTH=0 and KEYCOUNT=0. Got: {status_resp_fr!r}")
+            return False
+
+        pubkey_post_fr = send_and_receive(fd, "AT+PUBKEY=1")
+        if "+CME ERROR:" not in pubkey_post_fr and "ERROR" not in pubkey_post_fr:
+            print(f"  [FAIL] AT+PUBKEY=1 after AT+FACTORYRESET did not return error: {pubkey_post_fr!r}")
+            return False
+
+        print("  [PASS] AT+RESET and AT+FACTORYRESET zeroized slot store (KEYCOUNT=0), reset AUTH=0, and invalidated slot keys.")
 
         print("==================================================")
         print("[SUCCESS] All AT Protocol & Ceremony checks passed!")

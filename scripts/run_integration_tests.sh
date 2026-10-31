@@ -148,6 +148,26 @@ if [ -x "${CLI_BIN}" ]; then
             "${CLI_BIN}" p11 slots --module "${P11_LIB}"
             echo -e "\033[0;32m✓\033[0m hsmutil p11 slots passed."
         fi
+
+        if "${CLI_BIN}" --help | grep "reset" >/dev/null; then
+            if "${CLI_BIN}" reset --help 2>&1 | grep -q -- "-y"; then
+                echo -e "\033[1;36m--> Executing hsmutil reset cancellation test (input 'no')...\033[0m"
+                RESET_OUTPUT=$(echo "no" | "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" reset 2>&1 || true)
+                echo "${RESET_OUTPUT}"
+                if echo "${RESET_OUTPUT}" | grep -qi "cancelled"; then
+                    echo -e "\033[0;32m✓\033[0m hsmutil reset cancellation verified."
+                else
+                    echo -e "\033[0;31m[ERROR] hsmutil reset cancellation failed to abort with expected message.\033[0m"
+                    exit 1
+                fi
+
+                echo -e "\033[1;36m--> Executing hsmutil reset -y bypass...\033[0m"
+                "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" reset -y
+                echo -e "\033[0;32m✓\033[0m hsmutil reset -y verified."
+            else
+                echo -e "\033[1;33m[NOTICE] hsmutil reset -y flag not yet present in compiled binary; skipping CLI reset verification until Phase 3 rebuild.\033[0m"
+            fi
+        fi
     fi
 else
     echo -e "\033[1;33m[NOTICE] hsmutil binary not found in ${CLI_DIR}/bin. Run 'make cli-build' to compile.\033[0m"

@@ -96,12 +96,28 @@ class MockHSMEngine:
         self.authenticated = False
         self.retries = 3
         self.keys = {}
+        self.slots = self.keys
         self.master_secret = None
+        self.shamir_initialized = False
         self.expected_shares = {}
         self.submitted_shares = {}
         self.commitment_words = []
         self.ephemeral_target_key = None
         self.init_default_keys()
+
+    def handle_reset(self) -> str:
+        """Zeroizes persistent key slot store, Shamir secret, and authentication state."""
+        self.slots.clear()
+        if self.keys is not self.slots:
+            self.keys.clear()
+        self.master_secret = None
+        self.shamir_initialized = False
+        self.authenticated = False
+        self.retries = 3
+        self.submitted_shares.clear()
+        self.commitment_words.clear()
+        self.expected_shares.clear()
+        return "\r\nOK\r\n"
 
     def init_default_keys(self):
         """Pre-populate slot 1 with default SECP256R1 keypair."""
@@ -161,12 +177,8 @@ class MockHSMEngine:
             self.commitment_words = []
             return "\r\nOK\r\n"
 
-        if cmd_upper == "AT+RESET":
-            self.authenticated = False
-            self.submitted_shares = {}
-            self.commitment_words = []
-            self.retries = 3
-            return "\r\nOK\r\n"
+        if cmd_upper in ("AT+RESET", "AT+FACTORYRESET"):
+            return self.handle_reset()
 
         if cmd_upper.startswith("AT+AUTOLOCK="):
             val = cmd[12:].strip()
@@ -187,6 +199,7 @@ class MockHSMEngine:
 
             secret_bytes = os.urandom(32)
             self.master_secret = secret_bytes
+            self.shamir_initialized = True
             temp_shares = {i: [] for i in range(1, 6)}
             for b in secret_bytes:
                 a1, a2 = os.urandom(2)
