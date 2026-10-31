@@ -21,10 +21,14 @@ Multi-repo workspace for building an open-source Hardware Security Module (HSM) 
 - **Deterministic macOS Device Nodes**: macOS `AppleUSBCDC` driver synthesizes predictable BSD paths based on hardware serial and interface index:
   - `/dev/tty.usbmodem<BLE_ADDR>1`: Zephyr kernel console and logger (`cdc_acm_uart0`).
   - `/dev/tty.usbmodem<BLE_ADDR>3`: HSM AT command & crypto interface (`cdc_acm_uart1`).
-- **Multi-Device Targeting**: Connect multiple dongles concurrently without collisions. Target devices specifically using:
+- **Multi-Device Targeting & Disambiguation**: Connect multiple dongles concurrently without collisions.
   - `hsmutil devices`: Enumerate all connected dongles, BLE addresses, and port paths.
-  - `hsmutil <command> --serial <BLE_ADDR>` (shorthand `-s`).
+  - `hsmutil <command> --serial <BLE_ADDR>` (shorthand `-s`) or `--port <PATH>` (`-p`).
+  - Auto-discovery safety: When multiple dongles are plugged in without targeting flags, `hsmutil` refuses ambiguous auto-discovery and returns an informative table of detected devices rather than guessing arbitrarily.
   - `export NRF52840_HSM_SERIAL=<BLE_ADDR>` for CLI and PKCS#11 provider.
+- **Factory Reset Zeroization & Safeguards**:
+  - `hsmutil reset [-y/--yes]`: Irreversible hardware factory reset zeroizing all 32 CryptoCell CC310 keys, wiping Shamir Secret Sharing master secrets from RAM and NVS, and reverting device to unconfigured state (LED breathing BLUE).
+  - Protected by interactive stdin confirmation prompt `(yes/no)` or `-y`/`--yes` bypass for CI/CD scripting.
 
 > [!NOTE]
 > **Firmware DFU Streaming Migration**: Current firmware runs the pure AT command interface (`AT`, `AT+INFO`, `AT+AUTH`, `AT+KEYGEN`, `AT+SIGN`, etc.) on the dedicated CDC-ACM UART1 interface. Dual-stage MCUboot signing and candidate partition images (`zephyr.signed.bin`, `merged.hex`) are fully operational. DFU streaming migration (`AT+DFU_CHUNK` and `AT+DFU_APPLY`) will be addressed in a follow-up feature task.
