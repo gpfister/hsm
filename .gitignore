@@ -7,6 +7,7 @@ Thumbs.db
 /nrf52840-hsm-cli/
 /nrf52840-hsm-obsidian/
 /nrf52840-hsm-libpkcs11/
+/rpi-z2w-yocto-hsm/
 
 
 # Private Cryptographic Keys (do NOT commit private keys)

@@ -16,7 +16,8 @@ GIT_BASE_URL := https://github.com/$(GITHUB_ORG)
 endif
 
 # Sub-repositories
-SUBREPOS := nrf52840-hsm-firmware nrf52840-hsm-cli nrf52840-hsm-obsidian nrf52840-hsm-libpkcs11
+SUBREPOS := nrf52840-hsm-firmware nrf52840-hsm-cli nrf52840-hsm-obsidian nrf52840-hsm-libpkcs11 rpi-z2w-yocto-hsm
+YOCTO_DIR := rpi-z2w-yocto-hsm
 FIRMWARE_DIR := nrf52840-hsm-firmware
 CLI_DIR := nrf52840-hsm-cli
 OBSIDIAN_DIR := nrf52840-hsm-obsidian
@@ -27,6 +28,7 @@ ALL_REPOS := $(SUBREPOS)
 .PHONY: help all sync clone pull fetch push status st diff clean distclean keys \
         firmware-init firmware-sync firmware-build firmware-build-debug firmware-flash firmware-monitor firmware-clean firmware-distclean \
         cli-build cli-build-all cli-test cli-clean \
+        yocto-build-dev yocto-build-prod yocto-bundle yocto-shell yocto-clean \
         libpkcs11-build libpkcs11-test libpkcs11-clean \
         integration-test integration-test-hw
 
@@ -65,6 +67,13 @@ help:
 	@echo "  make libpkcs11-build     Build PKCS#11 shared library (Release)"
 	@echo "  make libpkcs11-test      Run CTest unit tests for PKCS#11 provider"
 	@echo "  make libpkcs11-clean     Clean PKCS#11 build artifacts"
+	@echo ""
+	@echo "Yocto OS Targets (rpi-z2w-yocto-hsm):"
+	@echo "  make yocto-build-dev     Build development OS image (hsm-image-dev) via Kas"
+	@echo "  make yocto-build-prod    Build air-gapped production OS image (hsm-image-prod) via Kas"
+	@echo "  make yocto-bundle        Build signed RAUC A/B update bundle (.raucb)"
+	@echo "  make yocto-shell         Launch interactive Kas shell inside build container"
+	@echo "  make yocto-clean         Clean Yocto build directory"
 	@echo ""
 	@echo "Integration Test Targets:"
 	@echo "  make integration-test    Run automated integration tests using mock PTY"
@@ -189,5 +198,21 @@ integration-test:
 integration-test-hw:
 	@TARGET_HW=1 ./scripts/run_integration_tests.sh
 
-clean: firmware-clean cli-clean libpkcs11-clean
+# Yocto Embedded Linux OS forwards
+yocto-build-dev:
+	@$(MAKE) -C $(YOCTO_DIR) build-dev
+
+yocto-build-prod:
+	@$(MAKE) -C $(YOCTO_DIR) build-prod
+
+yocto-bundle:
+	@$(MAKE) -C $(YOCTO_DIR) bundle
+
+yocto-shell:
+	@$(MAKE) -C $(YOCTO_DIR) shell
+
+yocto-clean:
+	@$(MAKE) -C $(YOCTO_DIR) clean
+
+clean: firmware-clean cli-clean libpkcs11-clean yocto-clean
 distclean: firmware-distclean cli-clean libpkcs11-clean

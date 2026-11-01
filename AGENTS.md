@@ -21,7 +21,8 @@ ncs-nrf52840dongle-kms/
 ├── nrf52840-hsm-firmware/            # Git Repo: Zephyr / NCS firmware workspace
 ├── nrf52840-hsm-cli/                 # Git Repo: Cross-platform Go CLI (`hsmutil`)
 ├── nrf52840-hsm-libpkcs11/           # Git Repo: PKCS#11 v2.40 shared library provider
-└── nrf52840-hsm-obsidian/            # Git Repo: Obsidian documentation vault
+├── nrf52840-hsm-obsidian/            # Git Repo: Obsidian documentation vault
+└── rpi-z2w-yocto-hsm/                # Git Repo: Yocto 5.0 (Scarthgap) air-gapped embedded Linux OS
 ```
 
 ---
@@ -66,6 +67,20 @@ ncs-nrf52840dongle-kms/
 - **Cryptographic Mechanisms**: `CKM_EC_KEY_PAIR_GEN`, `CKM_ECDSA`, `CKM_ECDSA_SHA256` (SECP256R1 / prime256v1).
 - **Tooling Compatibility**: Direct compatibility with OpenSC `pkcs11-tool`, OpenSSL 3 `pkcs11-provider`, and OpenSSH.
 
+### 2.5 Air-Gapped Embedded Linux OS (`rpi-z2w-yocto-hsm`)
+- **Framework**: Yocto Project 5.0 LTS (`scarthgap`) / Linux 6.6 LTS (`linux-raspberrypi`).
+- **Target Hardware**: 64-bit Raspberry Pi (`raspberrypi0-2w-64`, `raspberrypi3-64`, `raspberrypi4-64`, `raspberrypi5`) with Waveshare USB HAT (B).
+- **Hardening & Isolation**:
+  - Full air-gap: WiFi, Bluetooth, Ethernet, and unused GPIO headers disabled at kernel/DTB level.
+  - Total-drop firewall (`nftables` drop 100% inbound, outbound, forward).
+  - Read-only rootfs with dual-slot (A/B) RAUC update daemon and x509 cryptographic verification.
+- **Custom Driver (`nrf52840-hsm-kmod`)**:
+  - Automatically recognizes nRF52840 dongles and creates deterministic `/dev/tty.hsm<ble_address><number>`.
+  - Production mode: strictly binds and exposes AT crypto channel (`cdc_acm_uart1`), suppressing debug logging ports.
+- **Dedicated Console User Space**:
+  - Mandatory first-login wizard (password change, keyboard layout, locale) and login-time clock prompt.
+  - Auto-mount service granting `hsmutil` read/write access to external USB storage partitions.
+
 ---
 
 ## 3. Automation Commands (Root Makefile)
@@ -87,4 +102,9 @@ ncs-nrf52840dongle-kms/
 | `make libpkcs11-clean` | Cleans PKCS#11 build artifacts |
 | `make integration-test`| Runs end-to-end integration tests using virtual mock PTY |
 | `make integration-test-hw`| Runs integration tests against physical connected Dongle |
+| `make yocto-build-dev` | Builds development OS image (`hsm-image-dev`) via Kas |
+| `make yocto-build-prod`| Builds production air-gapped OS image (`hsm-image-prod`) via Kas |
+| `make yocto-bundle`    | Builds signed RAUC A/B update bundle (`.raucb`) |
+| `make yocto-shell`     | Launches interactive Kas shell inside build container |
+| `make yocto-clean`     | Cleans Yocto build directory |
 | `make clean` | Cleans build artifacts |
