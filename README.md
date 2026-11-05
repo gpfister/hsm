@@ -18,7 +18,7 @@ Multi-repo workspace for building an open-source Hardware Security Module (HSM) 
 
 ### USB Device Identification & Deterministic Topology
 - **Hardware BLE Address Serial Number**: Dynamically extracts the factory-burned 48-bit Bluetooth Device Address from Nordic Factory Information Configuration Registers (`NRF_FICR->DEVICEADDR[1:0]`), formatted as 12 hex digits (`%04X%08X`) for `iSerialNumber`.
-- **Interface Protocol Tagging**: Linker-level USB descriptor traversal patches `bInterfaceProtocol` to `0x01` (Zephyr Console) on Interface 0 and `0x02` (HSM AT API) on Interface 2.
+- **Interface Protocol Tagging**: Linker-level USB descriptor traversal patches `bInterfaceProtocol` and IAD `bFunctionProtocol` to `0x01` (ITU-T V.250 AT command protocol per ADR-0013) for both Interface 0 and Interface 2, ensuring native zero-driver macOS `AppleUSBACMControl` dual enumeration.
 - **Deterministic macOS Device Nodes**: macOS `AppleUSBCDC` driver synthesizes predictable BSD paths based on hardware serial and interface index:
   - `/dev/tty.usbmodem<BLE_ADDR>1`: Zephyr kernel console and logger (`cdc_acm_uart0`).
   - `/dev/tty.usbmodem<BLE_ADDR>3`: HSM AT command & crypto interface (`cdc_acm_uart1`).
@@ -30,9 +30,9 @@ Multi-repo workspace for building an open-source Hardware Security Module (HSM) 
 - **Factory Reset Zeroization & Safeguards**:
   - `hsmutil reset [-y/--yes]`: Irreversible hardware factory reset zeroizing all 32 CryptoCell CC310 keys, wiping Shamir Secret Sharing master secrets from RAM and NVS, and reverting device to unconfigured state (LED breathing BLUE).
   - Protected by interactive stdin confirmation prompt `(yes/no)` or `-y`/`--yes` bypass for CI/CD scripting.
-
-> [!NOTE]
-> **Firmware DFU Streaming Migration**: Current firmware runs the pure AT command interface (`AT`, `AT+INFO`, `AT+AUTH`, `AT+KEYGEN`, `AT+SIGN`, etc.) on the dedicated CDC-ACM UART1 interface. Dual-stage MCUboot signing and candidate partition images (`zephyr.signed.bin`, `merged.hex`) are fully operational. DFU streaming migration (`AT+DFU_CHUNK` and `AT+DFU_APPLY`) will be addressed in a follow-up feature task.
+- **Firmware DFU Streaming (`AT+DFU_INFO?`, `AT+DFU_CHUNK`, `AT+DFU_APPLY`)**:
+  - Native streaming DFU protocol allowing chunked firmware uploads (256 bytes per chunk) into the secondary MCUboot partition slot with 4-byte flash word boundary alignment, automatic signature validation, and deferred reboot swap.
+  - Fully integrated into `hsmutil firmware update --file <path>`.
 
 ---
 
