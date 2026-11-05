@@ -10,6 +10,7 @@ and automatic self-locking after sensitive operations.
 """
 
 import argparse
+import hashlib
 import os
 import pty
 import select
@@ -103,6 +104,8 @@ class MockHSMEngine:
         self.submitted_shares = {}
         self.commitment_words = []
         self.ephemeral_target_key = None
+        self.dfu_buffer = bytearray()
+        self.dfu_applied = False
         self.init_default_keys()
 
     def handle_reset(self) -> str:
@@ -117,6 +120,8 @@ class MockHSMEngine:
         self.submitted_shares.clear()
         self.commitment_words.clear()
         self.expected_shares.clear()
+        self.dfu_buffer = bytearray()
+        self.dfu_applied = False
         return "\r\nOK\r\n"
 
     def init_default_keys(self):
@@ -522,6 +527,53 @@ class MockHSMEngine:
             rand_hex = os.urandom(length).hex().upper()
             return f"\r\n+RANDOM: {rand_hex}\r\nOK\r\n"
 
+        if cmd_upper == "AT+DFU_INFO?":
+            img_size = len(self.dfu_buffer)
+            sha256_hex = hashlib.sha256(self.dfu_buffer).hexdigest().upper()
+            return f'\r\n+DFU_INFO: VER="1.0.0",SLOT=0,SIZE={img_size},SHA256="{sha256_hex}"\r\nOK\r\n'
+
+        if cmd_upper.startswith("AT+DFU_CHUNK="):
+            if not self.authenticated:
+                return "\r\n+CME ERROR: 1\r\n"
+            param_str = cmd[13:].strip()
+            parts = [p.strip() for p in param_str.split(",")]
+            if len(parts) != 2:
+                return "\r\n+CME ERROR: 5\r\n"
+            try:
+                offset = int(parts[0])
+            except ValueError:
+                return "\r\n+CME ERROR: 5\r\n"
+            if offset < 0:
+                return "\r\n+CME ERROR: 5\r\n"
+
+            hex_data = parts[1].strip('"').strip("'")
+            if len(hex_data) < 2 or len(hex_data) % 2 != 0:
+                return "\r\n+CME ERROR: 5\r\n"
+            try:
+                chunk_bytes = bytes.fromhex(hex_data)
+            except ValueError:
+                return "\r\n+CME ERROR: 5\r\n"
+            if not (1 <= len(chunk_bytes) <= 256):
+                return "\r\n+CME ERROR: 5\r\n"
+
+            if offset == 0:
+                self.dfu_buffer = bytearray()
+                self.dfu_applied = False
+
+            end_pos = offset + len(chunk_bytes)
+            if len(self.dfu_buffer) < end_pos:
+                self.dfu_buffer.extend(b"\x00" * (end_pos - len(self.dfu_buffer)))
+            self.dfu_buffer[offset:end_pos] = chunk_bytes
+            return "\r\nOK\r\n"
+
+        if cmd_upper == "AT+DFU_APPLY":
+            if not self.authenticated:
+                return "\r\n+CME ERROR: 1\r\n"
+            if len(self.dfu_buffer) == 0:
+                return "\r\n+CME ERROR: 6\r\n"
+            self.dfu_applied = True
+            return "\r\nOK\r\n"
+
         # Unsupported command
         return "\r\n+CME ERROR: 8\r\n"
 
@@ -613,7 +665,7 @@ def main():
             rlist, _, _ = select.select([master_fd], [], [], 0.5)
             if master_fd in rlist:
                 try:
-                    data = os.read(master_fd, 512)
+                    data = os.read(master_fd, 1024)
                 except OSError:
                     continue
 
@@ -622,7 +674,7 @@ def main():
 
                 read_buffer += data
 
-                if len(read_buffer) > 256 and b"\n" not in read_buffer:
+                if len(read_buffer) > 1024 and b"\n" not in read_buffer:
                     err = b"\r\n+CME ERROR: 7\r\n"
                     os.write(master_fd, err)
                     read_buffer = b""

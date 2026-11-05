@@ -207,7 +207,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
 
     try:
         # 1. AT Ping
-        print("  [1/13] Testing AT link ping...")
+        print("  [1/14] Testing AT link ping...")
         resp = send_and_receive(fd, "AT")
         if "OK" not in resp:
             print(f"  [FAIL] AT ping failed. Got: {resp!r}")
@@ -215,7 +215,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print("  [PASS] AT -> OK")
 
         # 2. AT+INFO?
-        print("  [2/13] Testing AT+INFO? query...")
+        print("  [2/14] Testing AT+INFO? query...")
         resp = send_and_receive(fd, "AT+INFO?")
         if "+INFO:" not in resp or "OK" not in resp:
             print(f"  [FAIL] AT+INFO? failed. Got: {resp!r}")
@@ -223,7 +223,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print(f"  [PASS] {resp.strip()}")
 
         # 3. AT+STATUS?
-        print("  [3/13] Testing AT+STATUS? query...")
+        print("  [3/14] Testing AT+STATUS? query...")
         resp = send_and_receive(fd, "AT+STATUS?")
         if "+STATUS:" not in resp or "OK" not in resp:
             print(f"  [FAIL] AT+STATUS? failed. Got: {resp!r}")
@@ -231,7 +231,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print(f"  [PASS] {resp.strip()}")
 
         # 4. Auth & Lockout Check
-        print("  [4/13] Testing authentication & error handling...")
+        print("  [4/14] Testing authentication & error handling...")
         resp = send_and_receive(fd, "AT+RESET")
         if "OK" not in resp:
             print(f"  [FAIL] AT+RESET failed. Got: {resp!r}")
@@ -257,7 +257,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print("  [PASS] PIN authentication succeeded and unlocked session.")
 
         # 5. Shamir 3-of-5 Threshold Initialization (AT+INIT=1)
-        print("  [5/13] Testing Shamir threshold initialization (AT+INIT=1)...")
+        print("  [5/14] Testing Shamir threshold initialization (AT+INIT=1)...")
         resp = send_and_receive(fd, "AT+INIT=1")
         if "+INIT: 1," not in resp or "OK" not in resp:
             print(f"  [FAIL] AT+INIT=1 failed. Got: {resp!r}")
@@ -288,7 +288,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print(f"  [PASS] 5 Shamir shares generated (3-of-5 threshold) over GF(256).")
 
         # 6. Duplicate Share Rejection Verification (+CME ERROR: 103)
-        print("  [6/13] Testing duplicate share rejection (+CME ERROR: 103)...")
+        print("  [6/14] Testing duplicate share rejection (+CME ERROR: 103)...")
         # Submit share 1
         resp = send_and_receive(fd, f"AT+SHARE=1,{shares[1]}")
         if "+SHARE: 1/3 ACCEPTED" not in resp or "OK" not in resp:
@@ -303,7 +303,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print("  [PASS] Duplicate share presentation rejected (+CME ERROR: 103).")
 
         # 7. Custodian Turn-by-Turn Entry, Quorum Unlock, and Ephemeral Word Commitment
-        print("  [7/13] Testing turn-by-turn share submission, quorum unlock, & BIP-39 word commitment...")
+        print("  [7/14] Testing turn-by-turn share submission, quorum unlock, & BIP-39 word commitment...")
         words = []
         if 'WORD="' in resp:
             words.append(resp.split('WORD="')[1].split('"')[0])
@@ -346,7 +346,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
             print("  [PASS] 3-of-5 Quorum unlocked session.")
 
         # 8. Keypair Generation & Auto Self-Lock State Assertion
-        print("  [8/13] Testing keypair generation (AT+KEYGEN=2,EC_P256) & auto self-lock assertion...")
+        print("  [8/14] Testing keypair generation (AT+KEYGEN=2,EC_P256) & auto self-lock assertion...")
         resp = send_and_receive(fd, "AT+KEYGEN=2,EC_P256")
         if "+KEYGEN: 2,PUB=\"" not in resp or "OK" not in resp:
             print(f"  [FAIL] Keygen failed. Got: {resp!r}")
@@ -372,7 +372,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print(f"  [PASS] Key generated and device automatically self-locked (+CME ERROR: 1 verified).")
 
         # 9. Public Key Readout (AT+PUBKEY=2) & Re-auth
-        print("  [9/13] Testing public key readout (AT+PUBKEY=2)...")
+        print("  [9/14] Testing public key readout (AT+PUBKEY=2)...")
         resp = send_and_receive(fd, "AT+PUBKEY=2")
         if pub_hex not in resp or "OK" not in resp:
             print(f"  [FAIL] AT+PUBKEY did not match generated public key. Got: {resp!r}")
@@ -380,7 +380,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print("  [PASS] Public key matches generated point.")
 
         # 10. TRNG Random Bytes (AT+RANDOM=32)
-        print("  [10/13] Testing TRNG random bytes (AT+RANDOM=32)...")
+        print("  [10/14] Testing TRNG random bytes (AT+RANDOM=32)...")
         resp = send_and_receive(fd, "AT+RANDOM=32")
         if "+RANDOM:" not in resp or "OK" not in resp:
             print(f"  [FAIL] Random generation failed. Got: {resp!r}")
@@ -392,7 +392,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print(f"  [PASS] Random 32 bytes: {rand_hex[:16]}...")
 
         # 11. ECDSA Signing & Cryptographic Verification
-        print("  [11/13] Testing ECDSA signing & verification post re-auth...")
+        print("  [11/14] Testing ECDSA signing & verification post re-auth...")
         # Re-authenticate to sign
         auth_resp = send_and_receive(fd, "AT+AUTH=123456")
         if "OK" not in auth_resp:
@@ -459,16 +459,16 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
 
         # 12. Dual-Device Blind Migration Handshake
         if skip_migration:
-            print("  [12/13] [SKIPPED] Skipping dual-device blind migration scenario as requested.")
+            print("  [12/14] [SKIPPED] Skipping dual-device blind migration scenario as requested.")
         else:
-            print("  [12/13] Testing dual-device blind migration handshake (ECDH + AES-256-GCM)...")
+            print("  [12/14] Testing dual-device blind migration handshake (ECDH + AES-256-GCM)...")
             if not run_dual_device_migration_test(fd, script_dir):
                 print("  [FAIL] Dual-device migration handshake failed.")
                 return False
             print("  [PASS] Dual-device blind migration completed: target private key verified via signature.")
 
         # 13. Factory Reset & Keystore Zeroization Verification (AT+RESET / AT+FACTORYRESET)
-        print("  [13/13] Testing factory reset zeroization (AT+RESET / AT+FACTORYRESET)...")
+        print("  [13/14] Testing factory reset zeroization (AT+RESET / AT+FACTORYRESET)...")
         # Ensure session is authenticated and generate key in slot 1
         send_and_receive(fd, "AT+AUTH=123456")
         send_and_receive(fd, "AT+KEYGEN=1,EC_P256")
@@ -524,6 +524,76 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
             return False
 
         print("  [PASS] AT+RESET and AT+FACTORYRESET zeroized slot store (KEYCOUNT=0), reset AUTH=0, and invalidated slot keys.")
+
+        # 14. AT DFU Protocol Verification (AT+DFU_INFO?, AT+DFU_CHUNK, AT+DFU_APPLY)
+        print("  [14/14] Testing AT DFU commands (AT+DFU_INFO?, AT+DFU_CHUNK, AT+DFU_APPLY)...")
+        dfu_info_resp = send_and_receive(fd, "AT+DFU_INFO?")
+        if os.environ.get("TARGET_HW") and "+CME ERROR: 8" in dfu_info_resp:
+            print("  [SKIP] Physical dongle running pre-DFU firmware (+CME ERROR: 8); skipping AT DFU check.")
+        else:
+            if "+DFU_INFO:" not in dfu_info_resp or "OK" not in dfu_info_resp:
+                print(f"  [FAIL] AT+DFU_INFO? failed. Got: {dfu_info_resp!r}")
+                return False
+
+            # Ensure device is locked and verify unauthenticated DFU rejection (+CME ERROR: 1)
+            send_and_receive(fd, "AT+LOCK")
+            locked_chunk = send_and_receive(fd, "AT+DFU_CHUNK=0,DEADBEEF")
+            if "+CME ERROR: 1" not in locked_chunk:
+                print(f"  [FAIL] Unauthenticated AT+DFU_CHUNK should return +CME ERROR: 1. Got: {locked_chunk!r}")
+                return False
+
+            locked_apply = send_and_receive(fd, "AT+DFU_APPLY")
+            if "+CME ERROR: 1" not in locked_apply:
+                print(f"  [FAIL] Unauthenticated AT+DFU_APPLY should return +CME ERROR: 1. Got: {locked_apply!r}")
+                return False
+
+            if not os.environ.get("TARGET_HW"):
+                auth_resp = send_and_receive(fd, "AT+AUTH=123456")
+                if "OK" not in auth_resp:
+                    print(f"  [FAIL] AT+AUTH before DFU test failed. Got: {auth_resp!r}")
+                    return False
+
+                # Empty DFU buffer apply should return +CME ERROR: 6
+                empty_apply = send_and_receive(fd, "AT+DFU_APPLY")
+                if "+CME ERROR: 6" not in empty_apply:
+                    print(f"  [FAIL] AT+DFU_APPLY on empty buffer expected +CME ERROR: 6. Got: {empty_apply!r}")
+                    return False
+
+                # Invalid hex parameter should return +CME ERROR: 5
+                bad_chunk = send_and_receive(fd, "AT+DFU_CHUNK=0,ZZZZ")
+                if "+CME ERROR: 5" not in bad_chunk:
+                    print(f"  [FAIL] Invalid hex AT+DFU_CHUNK expected +CME ERROR: 5. Got: {bad_chunk!r}")
+                    return False
+
+                # Stream 256-byte chunk at offset 0 (512 hex chars -> tests 1024-byte line buffer)
+                chunk0 = os.urandom(256)
+                c0_resp = send_and_receive(fd, f"AT+DFU_CHUNK=0,{chunk0.hex().upper()}")
+                if "OK" not in c0_resp:
+                    print(f"  [FAIL] 256-byte AT+DFU_CHUNK at offset 0 failed. Got: {c0_resp!r}")
+                    return False
+
+                # Stream 128-byte chunk at offset 256
+                chunk1 = os.urandom(128)
+                c1_resp = send_and_receive(fd, f"AT+DFU_CHUNK=256,{chunk1.hex().upper()}")
+                if "OK" not in c1_resp:
+                    print(f"  [FAIL] 128-byte AT+DFU_CHUNK at offset 256 failed. Got: {c1_resp!r}")
+                    return False
+
+                expected_sha = hashlib.sha256(chunk0 + chunk1).hexdigest().upper()
+                info_after = send_and_receive(fd, "AT+DFU_INFO?")
+                if "SIZE=384" not in info_after or f'SHA256="{expected_sha}"' not in info_after:
+                    print(f"  [FAIL] AT+DFU_INFO? after chunks mismatch. Got: {info_after!r}")
+                    return False
+
+                apply_resp = send_and_receive(fd, "AT+DFU_APPLY")
+                if "OK" not in apply_resp:
+                    print(f"  [FAIL] AT+DFU_APPLY failed. Got: {apply_resp!r}")
+                    return False
+
+                send_and_receive(fd, "AT+RESET")
+                print("  [PASS] AT+DFU_INFO?, 256B AT+DFU_CHUNK streaming, SHA-256 verification, and AT+DFU_APPLY succeeded.")
+            else:
+                print(f"  [PASS] AT+DFU_INFO? and locked DFU guards verified: {dfu_info_resp.strip()}")
 
         print("==================================================")
         print("[SUCCESS] All AT Protocol & Ceremony checks passed!")

@@ -168,6 +168,32 @@ if [ -x "${CLI_BIN}" ]; then
                 echo -e "\033[1;33m[NOTICE] hsmutil reset -y flag not yet present in compiled binary; skipping CLI reset verification until Phase 3 rebuild.\033[0m"
             fi
         fi
+
+        if "${CLI_BIN}" --help | grep "firmware" >/dev/null; then
+            echo -e "\033[1;36m--> Executing hsmutil firmware info...\033[0m"
+            "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" firmware info
+            echo -e "\033[0;32m✓\033[0m hsmutil firmware info passed."
+
+            if [ -z "${TARGET_HW:-}" ]; then
+                echo -e "\033[1;36m--> Executing hsmutil auth and firmware update on mock PTY...\033[0m"
+                TEMP_FW_BIN="/tmp/mock-hsm-dfu-test-$$.bin"
+                python3 -c "import os; open('${TEMP_FW_BIN}', 'wb').write(os.urandom(600))"
+                "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" auth 123456
+                "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" firmware update --file "${TEMP_FW_BIN}"
+                rm -f "${TEMP_FW_BIN}"
+                echo -e "\033[0;32m✓\033[0m hsmutil firmware update passed."
+
+                echo -e "\033[1;36m--> Verifying hsmutil firmware info after update...\033[0m"
+                FW_INFO_OUT=$("${CLI_BIN}" --port "${NRF52840_HSM_PORT}" firmware info)
+                echo "${FW_INFO_OUT}"
+                if echo "${FW_INFO_OUT}" | grep -q "600 bytes"; then
+                    echo -e "\033[0;32m✓\033[0m Post-update firmware size (600 bytes) verified."
+                else
+                    echo -e "\033[0;31m[ERROR] Post-update firmware info did not reflect 600-byte image.\033[0m"
+                    exit 1
+                fi
+            fi
+        fi
     fi
 else
     echo -e "\033[1;33m[NOTICE] hsmutil binary not found in ${CLI_DIR}/bin. Run 'make cli-build' to compile.\033[0m"
