@@ -22,7 +22,7 @@ ncs-nrf52840dongle-kms/
 ├── nrf52840-hsm-cli/                 # Git Repo: Cross-platform Go CLI (`hsmutil`)
 ├── nrf52840-hsm-libpkcs11/           # Git Repo: PKCS#11 v2.40 shared library provider
 ├── nrf52840-hsm-obsidian/            # Git Repo: Obsidian documentation vault
-└── rpi-z2w-yocto-hsm/                # Git Repo: Yocto 5.0 (Scarthgap) air-gapped embedded Linux OS
+└── rpi-z2w-yocto-hsm/                # Git Repo: Yocto 6.1 (Blacksail) air-gapped embedded Linux OS
 ```
 
 ---
@@ -68,7 +68,7 @@ ncs-nrf52840dongle-kms/
 - **Tooling Compatibility**: Direct compatibility with OpenSC `pkcs11-tool`, OpenSSL 3 `pkcs11-provider`, and OpenSSH.
 
 ### 2.5 Air-Gapped Embedded Linux OS (`rpi-z2w-yocto-hsm`)
-- **Framework**: Yocto Project 5.0 LTS (`scarthgap`) / Linux 6.6 LTS (`linux-raspberrypi`).
+- **Framework**: Yocto Project 6.1 (`blacksail`) / Linux 6.12+ (`linux-raspberrypi`).
 - **Target Hardware**: 64-bit Raspberry Pi (`raspberrypi0-2w-64`, `raspberrypi3-64`, `raspberrypi4-64`, `raspberrypi5`) with Waveshare USB HAT (B).
 - **Hardening & Isolation**:
   - Full air-gap: WiFi, Bluetooth, Ethernet, and unused GPIO headers disabled at kernel/DTB level.

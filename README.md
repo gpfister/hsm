@@ -10,7 +10,7 @@ Multi-repo workspace for building an open-source Hardware Security Module (HSM) 
 - **[`nrf52840-hsm-cli/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/nrf52840-hsm-cli)**: Cross-platform Go CLI & TUI executable `hsmutil` built with Cobra and BubbleTea. Supports device autodiscovery, multi-dongle targeting (`--serial`), key management, and PKCS#11 diagnostics.
 - **[`nrf52840-hsm-libpkcs11/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/nrf52840-hsm-libpkcs11)**: Cryptoki PKCS#11 v2.40 shared provider library (`.dylib`, `.so`, `.dll`) for OpenSC, OpenSSL, and OpenSSH.
 - **[`nrf52840-hsm-obsidian/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/nrf52840-hsm-obsidian)**: Centralized Obsidian documentation vault containing system architecture, ADRs, feature specifications, and session trajectories.
-- **[`rpi-z2w-yocto-hsm/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/rpi-z2w-yocto-hsm)**: Yocto 5.0 (Scarthgap) air-gapped embedded Linux operating system for Raspberry Pi Zero 2 W / 3 / 4 / 5 with kernel hardening, nftables total drop firewall, dual-slot RAUC A/B updates, and deterministic `/dev/tty.hsm*` driver.
+- **[`rpi-z2w-yocto-hsm/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/rpi-z2w-yocto-hsm)**: Yocto 6.1 (Blacksail) air-gapped embedded Linux operating system for Raspberry Pi Zero 2 W / 3 / 4 / 5 with kernel hardening, nftables total drop firewall, dual-slot RAUC A/B updates, and deterministic `/dev/tty.hsm*` driver.
 
 ---
 
