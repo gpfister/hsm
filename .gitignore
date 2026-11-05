@@ -7,6 +7,7 @@ Thumbs.db
 /hsm-cli/
 /hsm-obsidian/
 /hsm-libpkcs11/
+/libgphsm/
 /hsm-yocto-offgrid-rpi/
 /nrf52840-hsm-firmware/
 /nrf52840-hsm-cli/

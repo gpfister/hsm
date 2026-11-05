@@ -16,13 +16,13 @@ GIT_BASE_URL := https://github.com/$(GITHUB_ORG)
 endif
 
 # Sub-repositories
-SUBREPOS := hsm-ncs-firmware hsm-cli hsm-obsidian hsm-libpkcs11 hsm-yocto-offgrid-rpi
+SUBREPOS := hsm-ncs-firmware hsm-cli hsm-obsidian libgphsm hsm-yocto-offgrid-rpi
 YOCTO_DIR := hsm-yocto-offgrid-rpi
 FIRMWARE_DIR := hsm-ncs-firmware
 CLI_DIR := hsm-cli
 OBSIDIAN_DIR := hsm-obsidian
-LIBPKCS11_DIR := hsm-libpkcs11
-CLI_BIN := $(CLI_DIR)/bin/hsmutil
+LIBPKCS11_DIR := libgphsm
+CLI_BIN := $(CLI_DIR)/bin/gphsm
 ALL_REPOS := $(SUBREPOS)
 
 .PHONY: help all sync clone pull fetch push status st diff clean distclean keys \
@@ -65,15 +65,15 @@ help:
 	@echo "  make firmware-distclean  Distclean firmware (builds, Zephyr modules, .venv)"
 	@echo ""
 	@echo "CLI Targets:"
-	@echo "  make cli-build           Build 'hsmutil' for host"
-	@echo "  make cli-build-all       Cross-compile 'hsmutil' for macOS, Linux, Windows"
-	@echo "  make cli-test            Run Go tests for 'hsmutil'"
+	@echo "  make cli-build           Build 'gphsm' for host"
+	@echo "  make cli-build-all       Cross-compile 'gphsm' for macOS, Linux, Windows"
+	@echo "  make cli-test            Run Go tests for 'gphsm'"
 	@echo "  make cli-clean           Clean CLI build outputs"
 	@echo ""
 	@echo "PKCS#11 Provider Targets:"
-	@echo "  make libpkcs11-build     Build PKCS#11 shared library (Release)"
-	@echo "  make libpkcs11-test      Run CTest unit tests for PKCS#11 provider"
-	@echo "  make libpkcs11-clean     Clean PKCS#11 build artifacts"
+	@echo "  make libpkcs11-build     Build libgphsm PKCS#11 shared library (Release)"
+	@echo "  make libpkcs11-test      Run CTest unit tests for libgphsm PKCS#11 provider"
+	@echo "  make libpkcs11-clean     Clean libgphsm build artifacts"
 	@echo ""
 	@echo "Yocto OS Targets (hsm-yocto-offgrid-rpi):"
 	@echo "  make yocto-build-dev     Build development OS image (hsm-image-dev) via Kas"

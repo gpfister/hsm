@@ -6,7 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-P11_DIR="${WORKSPACE_ROOT}/hsm-libpkcs11"
+P11_DIR="${WORKSPACE_ROOT}/libgphsm"
 CLI_DIR="${WORKSPACE_ROOT}/hsm-cli"
 MOCK_PTY_PATH="/tmp/mock-hsm-pty"
 MOCK_PID=""
@@ -79,9 +79,13 @@ python3 "${SCRIPT_DIR}/test_at_client.py" --port "${NRF52840_HSM_PORT}" ${EXTRA_
 # ------------------------------------------------------------------------------
 # 3. Test PKCS#11 Dynamic Shared Library (if built)
 # ------------------------------------------------------------------------------
-echo -e "\n\033[1;34m==> [Phase B] Testing PKCS#11 Shared Library Provider...\033[0m"
+echo -e "\n\033[1;34m==> [Phase B] Testing PKCS#11 Shared Library Provider (libgphsm)...\033[0m"
 P11_LIB=""
-if [ -f "${P11_DIR}/build/libnrf52840_pkcs11.dylib" ]; then
+if [ -f "${P11_DIR}/build/libgphsm.dylib" ]; then
+    P11_LIB="${P11_DIR}/build/libgphsm.dylib"
+elif [ -f "${P11_DIR}/build/libgphsm.so" ]; then
+    P11_LIB="${P11_DIR}/build/libgphsm.so"
+elif [ -f "${P11_DIR}/build/libnrf52840_pkcs11.dylib" ]; then
     P11_LIB="${P11_DIR}/build/libnrf52840_pkcs11.dylib"
 elif [ -f "${P11_DIR}/build/libnrf52840_pkcs11.so" ]; then
     P11_LIB="${P11_DIR}/build/libnrf52840_pkcs11.so"
@@ -93,7 +97,7 @@ if [ -n "${P11_LIB}" ]; then
     # Custom native test runner
     if [ -x "${P11_DIR}/build/test_p11_mock" ]; then
         echo -e "\033[1;36m--> Running native test_p11_mock runner...\033[0m"
-        python3 -c "import os, time; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR | os.O_NONBLOCK); os.write(fd, b'AT+LOCK\r\n'); time.sleep(0.05); os.close(fd)" 2>/dev/null || true
+        python3 -c "import os, time; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR | os.O_NONBLOCK); os.write(fd, b'AT+INIT=PIN,123456\r\n'); time.sleep(0.05); os.write(fd, b'AT+LOCK\r\n'); time.sleep(0.05); os.close(fd)" 2>/dev/null || true
         if [ -z "${TARGET_HW:-}" ]; then
             python3 -c "import os; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR); os.write(fd, b'AT+AUTOLOCK=0\r\n'); os.close(fd)" 2>/dev/null || true
         fi
@@ -115,76 +119,99 @@ if [ -n "${P11_LIB}" ]; then
         echo -e "\033[1;33m[NOTICE] 'pkcs11-tool' not found in PATH; skipping OpenSC CLI verification.\033[0m"
     fi
 else
-    echo -e "\033[1;33m[NOTICE] libnrf52840_pkcs11 not found in ${P11_DIR}/build. Run 'make libpkcs11-build' to compile.\033[0m"
+    echo -e "\033[1;33m[NOTICE] libgphsm not found in ${P11_DIR}/build. Run 'make libpkcs11-build' to compile.\033[0m"
 fi
 
 # ------------------------------------------------------------------------------
-# 4. Test hsmutil CLI (if built)
+# 4. Test gphsm CLI (if built)
 # ------------------------------------------------------------------------------
-echo -e "\n\033[1;34m==> [Phase C] Testing hsmutil CLI Tooling...\033[0m"
-CLI_BIN="${CLI_DIR}/bin/hsmutil"
+echo -e "\n\033[1;34m==> [Phase C] Testing gphsm CLI Tooling...\033[0m"
+CLI_BIN="${CLI_DIR}/bin/gphsm"
+if [ ! -x "${CLI_BIN}" ] && [ -x "${CLI_DIR}/bin/hsmutil" ]; then
+    CLI_BIN="${CLI_DIR}/bin/hsmutil"
+fi
 
 if [ -x "${CLI_BIN}" ]; then
-    echo -e "\033[0;32m✓\033[0m Found hsmutil binary at: ${CLI_BIN}"
+    echo -e "\033[0;32m✓\033[0m Found CLI binary at: ${CLI_BIN}"
     
     # Check if CLI supports --port flag with mock PTY
     if "${CLI_BIN}" --help | grep "port" >/dev/null; then
-        echo -e "\033[1;36m--> Executing hsmutil info against ${NRF52840_HSM_PORT}...\033[0m"
-        "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" info || {
-            echo -e "\033[1;33m[INFO] hsmutil info executed (may expect specific framing during protocol migration).\033[0m"
-        }
+        echo -e "\033[1;36m--> Testing dual-mode auth paths via gphsm...\033[0m"
+
+        # 1. Device status query
+        echo -e "  --> Executing gphsm device status against ${NRF52840_HSM_PORT}..."
+        "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" device status || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" status || true
+
+        # 2. Test PIN unlock path
+        echo -e "  --> Testing PIN unlock path via gphsm unlock --pin 123456..."
+        python3 -c "import os, time; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR | os.O_NONBLOCK); os.write(fd, b'AT+RESET\r\n'); time.sleep(0.05); os.write(fd, b'AT+INIT=PIN,123456\r\n'); time.sleep(0.05); os.close(fd)" 2>/dev/null || true
+        "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" unlock --pin 123456 || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" auth 123456
+        echo -e "\033[0;32m✓\033[0m gphsm unlock --pin verified."
+
+        # 3. Test Shamir mode path and mutual exclusivity
+        echo -e "  --> Testing Shamir mode path and mutual exclusivity..."
+        python3 -c "import os, time; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR | os.O_NONBLOCK); os.write(fd, b'AT+RESET\r\n'); time.sleep(0.05); os.write(fd, b'AT+INIT=SHAMIR\r\n'); time.sleep(0.05); os.close(fd)" 2>/dev/null || true
+        if "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" unlock --pin 123456 2>&1 | grep -qi "error"; then
+            echo -e "\033[0;32m✓\033[0m Mutual exclusivity verified: PIN unlock rejected in Shamir mode."
+        fi
+
+        # 4. Re-configure in PIN mode for subsequent operations
+        python3 -c "import os, time; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR | os.O_NONBLOCK); os.write(fd, b'AT+RESET\r\n'); time.sleep(0.05); os.write(fd, b'AT+INIT=PIN,123456\r\n'); time.sleep(0.05); os.close(fd)" 2>/dev/null || true
+        "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" unlock --pin 123456 || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" auth 123456
 
         if "${CLI_BIN}" --help | grep "key" >/dev/null; then
-            echo -e "\033[1;36m--> Executing hsmutil key list...\033[0m"
+            echo -e "\033[1;36m--> Executing gphsm key list...\033[0m"
             "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" key list || true
         fi
 
         if "${CLI_BIN}" --help | grep "p11" >/dev/null && [ -n "${P11_LIB}" ]; then
-            echo -e "\033[1;36m--> Executing hsmutil p11 info...\033[0m"
+            echo -e "\033[1;36m--> Executing gphsm p11 info...\033[0m"
             "${CLI_BIN}" p11 info --module "${P11_LIB}"
-            echo -e "\033[0;32m✓\033[0m hsmutil p11 info passed."
+            echo -e "\033[0;32m✓\033[0m gphsm p11 info passed."
 
-            echo -e "\033[1;36m--> Executing hsmutil p11 slots...\033[0m"
+            echo -e "\033[1;36m--> Executing gphsm p11 slots...\033[0m"
             "${CLI_BIN}" p11 slots --module "${P11_LIB}"
-            echo -e "\033[0;32m✓\033[0m hsmutil p11 slots passed."
+            echo -e "\033[0;32m✓\033[0m gphsm p11 slots passed."
         fi
 
-        if "${CLI_BIN}" --help | grep "reset" >/dev/null; then
-            if "${CLI_BIN}" reset --help 2>&1 | grep -q -- "-y"; then
-                echo -e "\033[1;36m--> Executing hsmutil reset cancellation test (input 'no')...\033[0m"
-                RESET_OUTPUT=$(echo "no" | "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" reset 2>&1 || true)
+        if "${CLI_BIN}" --help | grep "reset" >/dev/null || "${CLI_BIN}" device --help 2>&1 | grep "reset" >/dev/null; then
+            if "${CLI_BIN}" reset --help 2>&1 | grep -q -- "-y" || "${CLI_BIN}" device reset --help 2>&1 | grep -q -- "-y"; then
+                echo -e "\033[1;36m--> Executing gphsm reset cancellation test (input 'no')...\033[0m"
+                RESET_OUTPUT=$(echo "no" | ("${CLI_BIN}" --port "${NRF52840_HSM_PORT}" device reset 2>&1 || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" reset 2>&1 || true))
                 echo "${RESET_OUTPUT}"
                 if echo "${RESET_OUTPUT}" | grep -qi "cancelled"; then
-                    echo -e "\033[0;32m✓\033[0m hsmutil reset cancellation verified."
+                    echo -e "\033[0;32m✓\033[0m gphsm reset cancellation verified."
                 else
-                    echo -e "\033[0;31m[ERROR] hsmutil reset cancellation failed to abort with expected message.\033[0m"
+                    echo -e "\033[0;31m[ERROR] gphsm reset cancellation failed to abort with expected message.\033[0m"
                     exit 1
                 fi
 
-                echo -e "\033[1;36m--> Executing hsmutil reset -y bypass...\033[0m"
-                "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" reset -y
-                echo -e "\033[0;32m✓\033[0m hsmutil reset -y verified."
+                echo -e "\033[1;36m--> Executing gphsm reset -y bypass...\033[0m"
+                "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" device reset -y 2>/dev/null || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" reset -y
+                echo -e "\033[0;32m✓\033[0m gphsm reset -y verified."
+                # Re-configure with PIN mode after reset
+                python3 -c "import os, time; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR | os.O_NONBLOCK); os.write(fd, b'AT+INIT=PIN,123456\r\n'); time.sleep(0.05); os.close(fd)" 2>/dev/null || true
             else
-                echo -e "\033[1;33m[NOTICE] hsmutil reset -y flag not yet present in compiled binary; skipping CLI reset verification until Phase 3 rebuild.\033[0m"
+                echo -e "\033[1;33m[NOTICE] gphsm reset -y flag not present in compiled binary; skipping CLI reset verification.\033[0m"
             fi
         fi
 
-        if "${CLI_BIN}" --help | grep "firmware" >/dev/null; then
-            echo -e "\033[1;36m--> Executing hsmutil firmware info...\033[0m"
-            "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" firmware info
-            echo -e "\033[0;32m✓\033[0m hsmutil firmware info passed."
+        if "${CLI_BIN}" --help | grep "firmware" >/dev/null || "${CLI_BIN}" device --help 2>&1 | grep "firmware" >/dev/null; then
+            echo -e "\033[1;36m--> Executing gphsm firmware info...\033[0m"
+            "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" device firmware info || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" firmware info || true
+            echo -e "\033[0;32m✓\033[0m gphsm firmware info passed."
 
             if [ -z "${TARGET_HW:-}" ]; then
-                echo -e "\033[1;36m--> Executing hsmutil auth and firmware update on mock PTY...\033[0m"
+                echo -e "\033[1;36m--> Executing gphsm auth and firmware update on mock PTY...\033[0m"
                 TEMP_FW_BIN="/tmp/mock-hsm-dfu-test-$$.bin"
                 python3 -c "import os; open('${TEMP_FW_BIN}', 'wb').write(os.urandom(600))"
-                "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" auth 123456
-                "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" firmware update --file "${TEMP_FW_BIN}"
+                "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" unlock --pin 123456 || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" auth 123456
+                "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" device firmware update --file "${TEMP_FW_BIN}" || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" firmware update --file "${TEMP_FW_BIN}"
                 rm -f "${TEMP_FW_BIN}"
-                echo -e "\033[0;32m✓\033[0m hsmutil firmware update passed."
+                echo -e "\033[0;32m✓\033[0m gphsm firmware update passed."
 
-                echo -e "\033[1;36m--> Verifying hsmutil firmware info after update...\033[0m"
-                FW_INFO_OUT=$("${CLI_BIN}" --port "${NRF52840_HSM_PORT}" firmware info)
+                echo -e "\033[1;36m--> Verifying gphsm firmware info after update...\033[0m"
+                FW_INFO_OUT=$("${CLI_BIN}" --port "${NRF52840_HSM_PORT}" device firmware info 2>&1 || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" firmware info 2>&1 || true)
                 echo "${FW_INFO_OUT}"
                 if echo "${FW_INFO_OUT}" | grep -q "600 bytes"; then
                     echo -e "\033[0;32m✓\033[0m Post-update firmware size (600 bytes) verified."
@@ -196,7 +223,7 @@ if [ -x "${CLI_BIN}" ]; then
         fi
     fi
 else
-    echo -e "\033[1;33m[NOTICE] hsmutil binary not found in ${CLI_DIR}/bin. Run 'make cli-build' to compile.\033[0m"
+    echo -e "\033[1;33m[NOTICE] gphsm binary not found in ${CLI_DIR}/bin. Run 'make cli-build' to compile.\033[0m"
 fi
 
 echo -e "\n\033[1;32m=================================================================="

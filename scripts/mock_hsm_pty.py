@@ -94,6 +94,8 @@ class MockHSMEngine:
         self.pin = pin
         self.verbose = verbose
         self.auto_lock = auto_lock
+        self.configured = False
+        self.auth_method = "NONE"
         self.authenticated = False
         self.retries = 3
         self.keys = {}
@@ -115,6 +117,8 @@ class MockHSMEngine:
             self.keys.clear()
         self.master_secret = None
         self.shamir_initialized = False
+        self.configured = False
+        self.auth_method = "NONE"
         self.authenticated = False
         self.retries = 3
         self.submitted_shares.clear()
@@ -158,10 +162,13 @@ class MockHSMEngine:
             return '\r\n+INFO: FW="1.0.0-mock",HW="PCA10059",UID="0102030405060708",BOOT="B0+MCUboot"\r\nOK\r\n'
 
         if cmd_upper == "AT+STATUS?":
+            conf_val = 1 if self.configured else 0
             auth_val = 1 if self.authenticated else 0
-            return f"\r\n+STATUS: AUTH={auth_val},RETRIES={self.retries},KEYCOUNT={len(self.keys)}\r\nOK\r\n"
+            return f"\r\n+STATUS: CONFIGURED={conf_val},AUTH={auth_val},METHOD={self.auth_method},RETRIES={self.retries},KEYCOUNT={len(self.keys)}\r\nOK\r\n"
 
         if cmd_upper.startswith("AT+AUTH="):
+            if self.auth_method == "SHAMIR":
+                return "\r\n+CME ERROR: 42\r\n"
             pin_arg = cmd[8:].strip()
             if self.retries <= 0:
                 # PIN blocked
@@ -196,34 +203,55 @@ class MockHSMEngine:
             else:
                 return "\r\n+CME ERROR: 5\r\n"
 
-        # 3-of-5 Shamir Threshold Initialization
+        # Dual-mode Initialization (PIN or Shamir 3-of-5 threshold)
         if cmd_upper.startswith("AT+INIT="):
+            if self.configured:
+                return "\r\n+CME ERROR: 41\r\n"
+
             param_str = cmd[8:].strip()
-            if param_str != "1":
-                return "\r\n+CME ERROR: 5\r\n"
+            parts = [p.strip() for p in param_str.split(",", 1)]
+            mode = parts[0].upper()
 
-            secret_bytes = os.urandom(32)
-            self.master_secret = secret_bytes
-            self.shamir_initialized = True
-            temp_shares = {i: [] for i in range(1, 6)}
-            for b in secret_bytes:
-                a1, a2 = os.urandom(2)
-                coeffs = [b, a1, a2]
+            if mode == "PIN":
+                if len(parts) < 2 or not parts[1]:
+                    return "\r\n+CME ERROR: 5\r\n"
+                self.pin = parts[1]
+                self.configured = True
+                self.auth_method = "PIN"
+                self.authenticated = False
+                self.retries = 3
+                return "\r\nOK\r\n"
+            elif mode in ("SHAMIR", "1"):
+                self.configured = True
+                self.auth_method = "SHAMIR"
+                secret_bytes = os.urandom(32)
+                self.master_secret = secret_bytes
+                self.shamir_initialized = True
+                temp_shares = {i: [] for i in range(1, 6)}
+                for b in secret_bytes:
+                    a1, a2 = os.urandom(2)
+                    coeffs = [b, a1, a2]
+                    for i in range(1, 6):
+                        temp_shares[i].append(eval_poly_gf256(coeffs, i))
+
+                self.expected_shares = {i: bytes(temp_shares[i]).hex().upper() for i in range(1, 6)}
+                self.submitted_shares = {}
+                self.commitment_words = []
+                self.authenticated = False
+
+                lines = []
                 for i in range(1, 6):
-                    temp_shares[i].append(eval_poly_gf256(coeffs, i))
-
-            self.expected_shares = {i: bytes(temp_shares[i]).hex().upper() for i in range(1, 6)}
-            self.submitted_shares = {}
-            self.commitment_words = []
-            self.authenticated = False
-
-            lines = []
-            for i in range(1, 6):
-                lines.append(f"+INIT: {i},{self.expected_shares[i]}")
-            return "\r\n" + "\r\n".join(lines) + "\r\nOK\r\n"
+                    lines.append(f"+INIT: {i},{self.expected_shares[i]}")
+                return "\r\n" + "\r\n".join(lines) + "\r\nOK\r\n"
+            else:
+                return "\r\n+CME ERROR: 5\r\n"
 
         # Custodian Share Submission
         if cmd_upper.startswith("AT+SHARE="):
+            if self.auth_method == "PIN":
+                return "\r\n+CME ERROR: 42\r\n"
+            if self.auth_method != "SHAMIR" or not self.shamir_initialized:
+                return "\r\n+CME ERROR: 42\r\n"
             param_str = cmd[9:].strip()
             parts = [p.strip() for p in param_str.split(",")]
             if len(parts) != 2:
@@ -280,6 +308,8 @@ class MockHSMEngine:
 
         # Ephemeral Word Commitment
         if cmd_upper.startswith("AT+COMMIT="):
+            if self.auth_method == "PIN":
+                return "\r\n+CME ERROR: 42\r\n"
             return "\r\nOK\r\n"
 
         # Blind Migration: Target Ephemeral ECDH Initialization

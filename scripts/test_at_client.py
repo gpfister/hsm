@@ -79,6 +79,9 @@ def run_dual_device_migration_test(source_fd, script_dir: str) -> bool:
 
         target_fd = os.open(target_pty_path, os.O_RDWR | os.O_NONBLOCK)
 
+        # Initialize target device in PIN mode
+        send_and_receive(target_fd, "AT+INIT=PIN,123456")
+
         # 1. Target Ephemeral ECDH Init
         resp = send_and_receive(target_fd, "AT+MIGRATE_TARGET_INIT")
         if "+MIGRATE_TARGET_INIT:" not in resp or "OK" not in resp:
@@ -207,7 +210,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
 
     try:
         # 1. AT Ping
-        print("  [1/14] Testing AT link ping...")
+        print("  [1/16] Testing AT link ping...")
         resp = send_and_receive(fd, "AT")
         if "OK" not in resp:
             print(f"  [FAIL] AT ping failed. Got: {resp!r}")
@@ -215,7 +218,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print("  [PASS] AT -> OK")
 
         # 2. AT+INFO?
-        print("  [2/14] Testing AT+INFO? query...")
+        print("  [2/16] Testing AT+INFO? query...")
         resp = send_and_receive(fd, "AT+INFO?")
         if "+INFO:" not in resp or "OK" not in resp:
             print(f"  [FAIL] AT+INFO? failed. Got: {resp!r}")
@@ -223,20 +226,61 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         print(f"  [PASS] {resp.strip()}")
 
         # 3. AT+STATUS?
-        print("  [3/14] Testing AT+STATUS? query...")
+        print("  [3/16] Testing AT+STATUS? query & initial unconfigured state...")
         resp = send_and_receive(fd, "AT+STATUS?")
         if "+STATUS:" not in resp or "OK" not in resp:
             print(f"  [FAIL] AT+STATUS? failed. Got: {resp!r}")
             return False
-        print(f"  [PASS] {resp.strip()}")
+        if "CONFIGURED=" in resp and "METHOD=" in resp:
+            print(f"  [PASS] Status reports dual-mode fields: {resp.strip()}")
+        else:
+            print(f"  [PASS] {resp.strip()}")
 
-        # 4. Auth & Lockout Check
-        print("  [4/14] Testing authentication & error handling...")
+        # 4. PIN Mode Initialization (AT+INIT=PIN) & Mutual Exclusivity Verification
+        print("  [4/16] Testing PIN mode init (AT+INIT=PIN,123456), re-init guard (+CME ERROR: 41), & mutual exclusivity...")
         resp = send_and_receive(fd, "AT+RESET")
         if "OK" not in resp:
-            print(f"  [FAIL] AT+RESET failed. Got: {resp!r}")
+            print(f"  [FAIL] AT+RESET before PIN init failed. Got: {resp!r}")
             return False
 
+        # Verify initial unconfigured status
+        st_pre = send_and_receive(fd, "AT+STATUS?")
+        if "CONFIGURED=0" not in st_pre or "METHOD=NONE" not in st_pre:
+            print(f"  [FAIL] Expected CONFIGURED=0 and METHOD=NONE after reset. Got: {st_pre!r}")
+            return False
+
+        # Initialize in PIN mode
+        resp = send_and_receive(fd, "AT+INIT=PIN,123456")
+        if "OK" not in resp:
+            print(f"  [FAIL] AT+INIT=PIN,123456 failed. Got: {resp!r}")
+            return False
+
+        # Verify configured state in PIN mode
+        st_post = send_and_receive(fd, "AT+STATUS?")
+        if "CONFIGURED=1" not in st_post or "METHOD=PIN" not in st_post:
+            print(f"  [FAIL] Expected CONFIGURED=1 and METHOD=PIN after AT+INIT=PIN. Got: {st_post!r}")
+            return False
+
+        # Verify already configured guard (+CME ERROR: 41)
+        reinit_pin = send_and_receive(fd, "AT+INIT=PIN,654321")
+        if "+CME ERROR: 41" not in reinit_pin:
+            print(f"  [FAIL] AT+INIT=PIN on configured device expected +CME ERROR: 41. Got: {reinit_pin!r}")
+            return False
+        reinit_shamir = send_and_receive(fd, "AT+INIT=SHAMIR")
+        if "+CME ERROR: 41" not in reinit_shamir:
+            print(f"  [FAIL] AT+INIT=SHAMIR on configured device expected +CME ERROR: 41. Got: {reinit_shamir!r}")
+            return False
+
+        # Verify mutual exclusivity: AT+SHARE rejected in PIN mode (+CME ERROR: 42)
+        dummy_share = "00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF"
+        share_in_pin = send_and_receive(fd, f"AT+SHARE=1,{dummy_share}")
+        if "+CME ERROR: 42" not in share_in_pin:
+            print(f"  [FAIL] AT+SHARE in PIN mode expected +CME ERROR: 42. Got: {share_in_pin!r}")
+            return False
+        print("  [PASS] AT+INIT=PIN configured device, re-init rejected (+CME ERROR: 41), and AT+SHARE rejected (+CME ERROR: 42).")
+
+        # 5. PIN Authentication & Error Handling
+        print("  [5/16] Testing PIN authentication, invalid PIN error, and retry counter...")
         # Wrong PIN
         resp = send_and_receive(fd, "AT+AUTH=wrongpin")
         if "+CME ERROR: 2" not in resp:
@@ -256,11 +300,17 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
             return False
         print("  [PASS] PIN authentication succeeded and unlocked session.")
 
-        # 5. Shamir 3-of-5 Threshold Initialization (AT+INIT=1)
-        print("  [5/14] Testing Shamir threshold initialization (AT+INIT=1)...")
-        resp = send_and_receive(fd, "AT+INIT=1")
+        # 6. Shamir Mode Initialization (AT+INIT=SHAMIR) & Mutual Exclusivity
+        print("  [6/16] Testing Shamir mode init (AT+INIT=SHAMIR), re-init guard (+CME ERROR: 41), & mutual exclusivity...")
+        resp = send_and_receive(fd, "AT+RESET")
+        if "OK" not in resp:
+            print(f"  [FAIL] AT+RESET before Shamir init failed. Got: {resp!r}")
+            return False
+
+        # Initialize in Shamir mode
+        resp = send_and_receive(fd, "AT+INIT=SHAMIR")
         if "+INIT: 1," not in resp or "OK" not in resp:
-            print(f"  [FAIL] AT+INIT=1 failed. Got: {resp!r}")
+            print(f"  [FAIL] AT+INIT=SHAMIR failed. Got: {resp!r}")
             return False
 
         shares = {}
@@ -272,7 +322,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
                 shares[int(s_idx)] = s_hex.strip()
 
         if len(shares) != 5:
-            print(f"  [FAIL] Expected 5 shares from AT+INIT=1, got {len(shares)}")
+            print(f"  [FAIL] Expected 5 shares from AT+INIT=SHAMIR, got {len(shares)}")
             return False
 
         for i in range(1, 6):
@@ -280,15 +330,31 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
                 print(f"  [FAIL] Share {i} invalid length: {len(shares[i])} (expected 64)")
                 return False
 
-        # Verify device entered locked state upon initialization
+        # Verify device entered locked state in SHAMIR mode
         status_resp = send_and_receive(fd, "AT+STATUS?")
-        if "AUTH=0" not in status_resp:
-            print(f"  [FAIL] Device must be in locked state after AT+INIT=1. Got: {status_resp!r}")
+        if "AUTH=0" not in status_resp or "METHOD=SHAMIR" not in status_resp or "CONFIGURED=1" not in status_resp:
+            print(f"  [FAIL] Expected CONFIGURED=1, METHOD=SHAMIR, AUTH=0 after AT+INIT=SHAMIR. Got: {status_resp!r}")
             return False
-        print(f"  [PASS] 5 Shamir shares generated (3-of-5 threshold) over GF(256).")
 
-        # 6. Duplicate Share Rejection Verification (+CME ERROR: 103)
-        print("  [6/14] Testing duplicate share rejection (+CME ERROR: 103)...")
+        # Verify already configured guard (+CME ERROR: 41)
+        reinit_s = send_and_receive(fd, "AT+INIT=SHAMIR")
+        if "+CME ERROR: 41" not in reinit_s:
+            print(f"  [FAIL] Re-init in Shamir mode expected +CME ERROR: 41. Got: {reinit_s!r}")
+            return False
+        reinit_p = send_and_receive(fd, "AT+INIT=PIN,123456")
+        if "+CME ERROR: 41" not in reinit_p:
+            print(f"  [FAIL] Re-init in Shamir mode expected +CME ERROR: 41. Got: {reinit_p!r}")
+            return False
+
+        # Verify mutual exclusivity: AT+AUTH rejected in Shamir mode (+CME ERROR: 42)
+        auth_in_shamir = send_and_receive(fd, "AT+AUTH=123456")
+        if "+CME ERROR: 42" not in auth_in_shamir:
+            print(f"  [FAIL] AT+AUTH in Shamir mode expected +CME ERROR: 42. Got: {auth_in_shamir!r}")
+            return False
+        print("  [PASS] 5 Shamir shares generated (3-of-5 threshold) and AT+AUTH rejected (+CME ERROR: 42).")
+
+        # 7. Duplicate Share Rejection Verification (+CME ERROR: 103)
+        print("  [7/16] Testing duplicate share rejection (+CME ERROR: 103)...")
         # Submit share 1
         resp = send_and_receive(fd, f"AT+SHARE=1,{shares[1]}")
         if "+SHARE: 1/3 ACCEPTED" not in resp or "OK" not in resp:
@@ -302,8 +368,8 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
             return False
         print("  [PASS] Duplicate share presentation rejected (+CME ERROR: 103).")
 
-        # 7. Custodian Turn-by-Turn Entry, Quorum Unlock, and Ephemeral Word Commitment
-        print("  [7/14] Testing turn-by-turn share submission, quorum unlock, & BIP-39 word commitment...")
+        # 8. Custodian Turn-by-Turn Entry, Quorum Unlock, and Ephemeral Word Commitment
+        print("  [8/16] Testing turn-by-turn share submission, quorum unlock, & BIP-39 word commitment...")
         words = []
         if 'WORD="' in resp:
             words.append(resp.split('WORD="')[1].split('"')[0])
@@ -345,8 +411,21 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         else:
             print("  [PASS] 3-of-5 Quorum unlocked session.")
 
-        # 8. Keypair Generation & Auto Self-Lock State Assertion
-        print("  [8/14] Testing keypair generation (AT+KEYGEN=2,EC_P256) & auto self-lock assertion...")
+        # 9. Configure PIN Mode for Operational & Cryptographic Tests
+        print("  [9/16] Reconfiguring device to PIN mode for operational & cryptographic tests...")
+        send_and_receive(fd, "AT+RESET")
+        init_resp = send_and_receive(fd, "AT+INIT=PIN,123456")
+        if "OK" not in init_resp:
+            print(f"  [FAIL] Failed to reconfigure to PIN mode: {init_resp!r}")
+            return False
+        auth_resp = send_and_receive(fd, "AT+AUTH=123456")
+        if "OK" not in auth_resp:
+            print(f"  [FAIL] Failed to authenticate in PIN mode: {auth_resp!r}")
+            return False
+        print("  [PASS] Device reset and configured in PIN mode.")
+
+        # 10. Keypair Generation & Auto Self-Lock State Assertion
+        print("  [10/16] Testing keypair generation (AT+KEYGEN=2,EC_P256) & auto self-lock assertion...")
         resp = send_and_receive(fd, "AT+KEYGEN=2,EC_P256")
         if "+KEYGEN: 2,PUB=\"" not in resp or "OK" not in resp:
             print(f"  [FAIL] Keygen failed. Got: {resp!r}")
@@ -371,16 +450,16 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
             return False
         print(f"  [PASS] Key generated and device automatically self-locked (+CME ERROR: 1 verified).")
 
-        # 9. Public Key Readout (AT+PUBKEY=2) & Re-auth
-        print("  [9/14] Testing public key readout (AT+PUBKEY=2)...")
+        # 11. Public Key Readout (AT+PUBKEY=2) & Re-auth
+        print("  [11/16] Testing public key readout (AT+PUBKEY=2)...")
         resp = send_and_receive(fd, "AT+PUBKEY=2")
         if pub_hex not in resp or "OK" not in resp:
             print(f"  [FAIL] AT+PUBKEY did not match generated public key. Got: {resp!r}")
             return False
         print("  [PASS] Public key matches generated point.")
 
-        # 10. TRNG Random Bytes (AT+RANDOM=32)
-        print("  [10/14] Testing TRNG random bytes (AT+RANDOM=32)...")
+        # 12. TRNG Random Bytes (AT+RANDOM=32)
+        print("  [12/16] Testing TRNG random bytes (AT+RANDOM=32)...")
         resp = send_and_receive(fd, "AT+RANDOM=32")
         if "+RANDOM:" not in resp or "OK" not in resp:
             print(f"  [FAIL] Random generation failed. Got: {resp!r}")
@@ -391,8 +470,8 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
             return False
         print(f"  [PASS] Random 32 bytes: {rand_hex[:16]}...")
 
-        # 11. ECDSA Signing & Cryptographic Verification
-        print("  [11/14] Testing ECDSA signing & verification post re-auth...")
+        # 13. ECDSA Signing & Cryptographic Verification
+        print("  [13/16] Testing ECDSA signing & verification post re-auth...")
         # Re-authenticate to sign
         auth_resp = send_and_receive(fd, "AT+AUTH=123456")
         if "OK" not in auth_resp:
@@ -457,18 +536,18 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
                     return False
                 print(f"  [PASS] OpenSSL pkeyutl verified signature: {proc.stdout.strip()}")
 
-        # 12. Dual-Device Blind Migration Handshake
+        # 14. Dual-Device Blind Migration Handshake
         if skip_migration:
-            print("  [12/14] [SKIPPED] Skipping dual-device blind migration scenario as requested.")
+            print("  [14/16] [SKIPPED] Skipping dual-device blind migration scenario as requested.")
         else:
-            print("  [12/14] Testing dual-device blind migration handshake (ECDH + AES-256-GCM)...")
+            print("  [14/16] Testing dual-device blind migration handshake (ECDH + AES-256-GCM)...")
             if not run_dual_device_migration_test(fd, script_dir):
                 print("  [FAIL] Dual-device migration handshake failed.")
                 return False
             print("  [PASS] Dual-device blind migration completed: target private key verified via signature.")
 
-        # 13. Factory Reset & Keystore Zeroization Verification (AT+RESET / AT+FACTORYRESET)
-        print("  [13/14] Testing factory reset zeroization (AT+RESET / AT+FACTORYRESET)...")
+        # 15. Factory Reset & Keystore Zeroization Verification (AT+RESET / AT+FACTORYRESET)
+        print("  [15/16] Testing factory reset zeroization (AT+RESET / AT+FACTORYRESET)...")
         # Ensure session is authenticated and generate key in slot 1
         send_and_receive(fd, "AT+AUTH=123456")
         send_and_receive(fd, "AT+KEYGEN=1,EC_P256")
@@ -486,10 +565,13 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
             print(f"  [FAIL] AT+RESET failed. Got: {reset_resp!r}")
             return False
 
-        # Query AT+STATUS? and assert AUTH=0 and KEYCOUNT=0
+        # Query AT+STATUS? and assert AUTH=0, KEYCOUNT=0, CONFIGURED=0, METHOD=NONE
         status_resp = send_and_receive(fd, "AT+STATUS?")
         if "+STATUS:" not in status_resp or "AUTH=0" not in status_resp or "KEYCOUNT=0" not in status_resp:
             print(f"  [FAIL] AT+STATUS? after AT+RESET expected AUTH=0 and KEYCOUNT=0. Got: {status_resp!r}")
+            return False
+        if "CONFIGURED=0" not in status_resp or "METHOD=NONE" not in status_resp:
+            print(f"  [FAIL] AT+STATUS? after AT+RESET expected CONFIGURED=0 and METHOD=NONE. Got: {status_resp!r}")
             return False
 
         # Query AT+PUBKEY=1 and assert rejection / error
@@ -499,6 +581,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
             return False
 
         # Verify AT+FACTORYRESET alias works identically
+        send_and_receive(fd, "AT+INIT=PIN,123456")
         send_and_receive(fd, "AT+AUTH=123456")
         send_and_receive(fd, "AT+KEYGEN=1,EC_P256")
         send_and_receive(fd, "AT+AUTH=123456")
@@ -517,16 +600,19 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
         if "+STATUS:" not in status_resp_fr or "AUTH=0" not in status_resp_fr or "KEYCOUNT=0" not in status_resp_fr:
             print(f"  [FAIL] AT+STATUS? after AT+FACTORYRESET expected AUTH=0 and KEYCOUNT=0. Got: {status_resp_fr!r}")
             return False
+        if "CONFIGURED=0" not in status_resp_fr or "METHOD=NONE" not in status_resp_fr:
+            print(f"  [FAIL] AT+STATUS? after AT+FACTORYRESET expected CONFIGURED=0 and METHOD=NONE. Got: {status_resp_fr!r}")
+            return False
 
         pubkey_post_fr = send_and_receive(fd, "AT+PUBKEY=1")
         if "+CME ERROR:" not in pubkey_post_fr and "ERROR" not in pubkey_post_fr:
             print(f"  [FAIL] AT+PUBKEY=1 after AT+FACTORYRESET did not return error: {pubkey_post_fr!r}")
             return False
 
-        print("  [PASS] AT+RESET and AT+FACTORYRESET zeroized slot store (KEYCOUNT=0), reset AUTH=0, and invalidated slot keys.")
+        print("  [PASS] AT+RESET and AT+FACTORYRESET zeroized slot store (KEYCOUNT=0), reset AUTH=0, and reset dual-mode state.")
 
-        # 14. AT DFU Protocol Verification (AT+DFU_INFO?, AT+DFU_CHUNK, AT+DFU_APPLY)
-        print("  [14/14] Testing AT DFU commands (AT+DFU_INFO?, AT+DFU_CHUNK, AT+DFU_APPLY)...")
+        # 16. AT DFU Protocol Verification (AT+DFU_INFO?, AT+DFU_CHUNK, AT+DFU_APPLY)
+        print("  [16/16] Testing AT DFU commands (AT+DFU_INFO?, AT+DFU_CHUNK, AT+DFU_APPLY)...")
         dfu_info_resp = send_and_receive(fd, "AT+DFU_INFO?")
         if os.environ.get("TARGET_HW") and "+CME ERROR: 8" in dfu_info_resp:
             print("  [SKIP] Physical dongle running pre-DFU firmware (+CME ERROR: 8); skipping AT DFU check.")
@@ -548,6 +634,7 @@ def run_tests(port_path: str, skip_migration: bool = False) -> bool:
                 return False
 
             if not os.environ.get("TARGET_HW"):
+                send_and_receive(fd, "AT+INIT=PIN,123456")
                 auth_resp = send_and_receive(fd, "AT+AUTH=123456")
                 if "OK" not in auth_resp:
                     print(f"  [FAIL] AT+AUTH before DFU test failed. Got: {auth_resp!r}")
