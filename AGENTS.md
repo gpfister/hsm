@@ -92,6 +92,10 @@ ncs-nrf52840dongle-kms/
 | `make diff` | Displays uncommitted changes across all repositories |
 | `make pull` | Fast-forwards all sub-repositories |
 | `make push` | Pushes current branches across all sub-repositories |
+| `make worktree-list` (or `wt`) | Lists active worktrees across root and all sub-repositories |
+| `make worktree-add` (or `wt-add`) | Creates parallel worktree across root and subrepos (`NAME=<name>`) |
+| `make worktree-rm` (or `wt-rm`) | Removes worktree across root and subrepos (`NAME=<name>`) |
+| `make worktree-prune` | Prunes stale worktree metadata |
 | `make firmware-build` | Builds production and debug firmware |
 | `make firmware-flash` | Programs device using J-Link `802007333` |
 | `make firmware-monitor`| Connects to firmware console USB port |

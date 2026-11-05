@@ -9,6 +9,9 @@ Thumbs.db
 /nrf52840-hsm-libpkcs11/
 /rpi-z2w-yocto-hsm/
 
+# Worktrees (for parallel multi-repository tasks)
+.worktrees/
+
 
 # Private Cryptographic Keys (do NOT commit private keys)
 keys/*.pem

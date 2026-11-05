@@ -26,6 +26,7 @@ CLI_BIN := $(CLI_DIR)/bin/hsmutil
 ALL_REPOS := $(SUBREPOS)
 
 .PHONY: help all sync clone pull fetch push status st diff clean distclean keys \
+        worktree-add wt-add worktree-rm wt-rm worktree-list wt-list wt worktree-prune \
         firmware-init firmware-sync firmware-build firmware-build-debug firmware-flash firmware-monitor firmware-clean firmware-distclean \
         cli-build cli-build-all cli-test cli-clean \
         yocto-build-dev yocto-build-prod yocto-bundle yocto-shell yocto-clean \
@@ -43,6 +44,12 @@ help:
 	@echo "  make push                Push current branches across all repos"
 	@echo "  make status (st)         Show branch and status across all repos"
 	@echo "  make diff                Show diff across all repos"
+	@echo ""
+	@echo "Worktree Management (Parallel Development):"
+	@echo "  make worktree-list (wt)  List active worktrees across workspace and subrepos"
+	@echo "  make worktree-add        Create parallel worktree (NAME=<name> [BRANCH=...] [BASE=...])"
+	@echo "  make worktree-rm         Remove worktree (NAME=<name> [FORCE=--force])"
+	@echo "  make worktree-prune      Prune stale worktree metadata"
 	@echo ""
 	@echo "Keys:"
 	@echo "  make keys                Generate ECDSA P-256 keys in keys/ if missing"
@@ -86,7 +93,7 @@ keys:
 clone:
 	@echo -e "\033[1;34m==> Checking and cloning missing repositories...\033[0m"
 	@for r in $(SUBREPOS); do \
-		if [ ! -d "$$r/.git" ]; then \
+		if [ ! -e "$$r/.git" ]; then \
 			echo -e "  \033[1;33mSubrepo $$r not yet cloned or initialized.\033[0m"; \
 		else \
 			echo -e "  \033[0;32m✓\033[0m Subrepo $$r ready."; \
@@ -97,7 +104,7 @@ pull:
 	@echo -e "\033[1;34m==> Pulling latest changes across repositories...\033[0m"
 	@git pull --ff-only 2>/dev/null || echo -e "  \033[1;33m⚠️ Could not fast-forward root\033[0m"
 	@for r in $(ALL_REPOS); do \
-		if [ -d "$$r/.git" ]; then \
+		if [ -e "$$r/.git" ]; then \
 			echo -e "  \033[1;36mPulling $$r...\033[0m"; \
 			git -C "$$r" pull --ff-only 2>/dev/null || echo -e "  \033[1;33m⚠️ Could not fast-forward $$r\033[0m"; \
 		fi; \
@@ -106,7 +113,7 @@ pull:
 push:
 	@echo -e "\033[1;34m==> Pushing changes across repositories...\033[0m"
 	@for r in $(ALL_REPOS); do \
-		if [ -d "$$r/.git" ]; then \
+		if [ -e "$$r/.git" ]; then \
 			branch=$$(git -C "$$r" rev-parse --abbrev-ref HEAD 2>/dev/null); \
 			if [ -n "$$branch" ] && [ "$$branch" != "HEAD" ]; then \
 				echo -e "  \033[1;36mPushing $$r ($$branch)...\033[0m"; \
@@ -125,7 +132,7 @@ status st:
 	if [ "$$root_status" -eq 0 ]; then rstat="\033[0;32mclean\033[0m"; else rstat="\033[0;31m$$root_status modified\033[0m"; fi; \
 	printf "%-35s %-20s %-25b\n" "root (workspace)" "$$root_branch" "$$rstat"
 	@for r in $(ALL_REPOS); do \
-		if [ -d "$$r/.git" ]; then \
+		if [ -e "$$r/.git" ]; then \
 			b=$$(git -C "$$r" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached"); \
 			st=$$(git -C "$$r" status --porcelain 2>/dev/null | wc -l | tr -d ' '); \
 			if [ "$$st" -eq 0 ]; then stat_str="\033[0;32mclean\033[0m"; else stat_str="\033[0;31m$$st modified\033[0m"; fi; \
@@ -135,13 +142,34 @@ status st:
 
 diff:
 	@for r in $(ALL_REPOS); do \
-		if [ -d "$$r/.git" ]; then \
+		if [ -e "$$r/.git" ]; then \
 			echo -e "\033[1;34m=== Diff for $$r ===\033[0m"; \
 			git -C "$$r" diff; \
 		fi; \
 	done
 
 sync: clone pull status
+
+# Worktree targets
+worktree-list wt-list wt:
+	@./scripts/worktree.sh list
+
+worktree-add wt-add:
+	@if [ -z "$(NAME)" ]; then \
+		echo "Usage: make worktree-add NAME=<worktree-name> [BRANCH=<branch>] [BASE=<base>]"; \
+		exit 1; \
+	fi
+	@./scripts/worktree.sh add $(NAME) $(BRANCH) $(BASE)
+
+worktree-rm wt-rm:
+	@if [ -z "$(NAME)" ]; then \
+		echo "Usage: make worktree-rm NAME=<worktree-name> [FORCE=--force]"; \
+		exit 1; \
+	fi
+	@./scripts/worktree.sh remove $(NAME) $(FORCE)
+
+worktree-prune:
+	@./scripts/worktree.sh prune
 
 # Firmware forwards
 firmware-init: keys

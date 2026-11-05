@@ -66,6 +66,24 @@ make libpkcs11-build
 make libpkcs11-test
 ```
 
+### Parallel Development & Git Worktrees
+
+The workspace provides unified multi-repository worktree orchestration, enabling multiple features, bugfixes, or experiments to be developed in parallel without switching branches in your main checkout:
+
+```bash
+# List all active worktrees across workspace and sub-repositories
+make worktree-list   # or 'make wt'
+
+# Create a parallel worktree across root and all sub-repos (in .worktrees/<name>)
+make worktree-add NAME=feature-crypto
+
+# Switch to the parallel worktree
+cd .worktrees/feature-crypto
+
+# Remove worktree and clean up git references when finished
+make worktree-rm NAME=feature-crypto
+```
+
 ### Multi-Dongle Discovery
 
 ```bash
