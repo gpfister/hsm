@@ -6,11 +6,11 @@ Multi-repo workspace for building an open-source Hardware Security Module (HSM) 
 
 ## Sub-Repositories
 
-- **[`nrf52840-hsm-firmware/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/nrf52840-hsm-firmware)**: NCS v3.4.1 / Zephyr RTOS firmware with dual-stage secure boot (B0 + MCUboot), ARM CryptoCell CC310 hardware cryptography, dynamic BLE MAC address USB serial descriptor, and dual CDC-ACM interfaces (Console & AT protocol).
-- **[`nrf52840-hsm-cli/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/nrf52840-hsm-cli)**: Cross-platform Go CLI & TUI executable `hsmutil` built with Cobra and BubbleTea. Supports device autodiscovery, multi-dongle targeting (`--serial`), key management, and PKCS#11 diagnostics.
-- **[`nrf52840-hsm-libpkcs11/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/nrf52840-hsm-libpkcs11)**: Cryptoki PKCS#11 v2.40 shared provider library (`.dylib`, `.so`, `.dll`) for OpenSC, OpenSSL, and OpenSSH.
-- **[`nrf52840-hsm-obsidian/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/nrf52840-hsm-obsidian)**: Centralized Obsidian documentation vault containing system architecture, ADRs, feature specifications, and session trajectories.
-- **[`rpi-z2w-yocto-hsm/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/rpi-z2w-yocto-hsm)**: Yocto 6.1 (Blacksail) air-gapped embedded Linux operating system for Raspberry Pi Zero 2 W / 3 / 4 / 5 with kernel hardening, nftables total drop firewall, dual-slot RAUC A/B updates, and deterministic `/dev/tty.hsm*` driver.
+- **[`hsm-ncs-firmware/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/hsm-ncs-firmware)**: NCS v3.4.1 / Zephyr RTOS firmware with dual-stage secure boot (B0 + MCUboot), ARM CryptoCell CC310 hardware cryptography, dynamic BLE MAC address USB serial descriptor, and dual CDC-ACM interfaces (Console & AT protocol).
+- **[`hsm-cli/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/hsm-cli)**: Cross-platform Go CLI & TUI executable `hsmutil` built with Cobra and BubbleTea. Supports device autodiscovery, multi-dongle targeting (`--serial`), key management, and PKCS#11 diagnostics.
+- **[`hsm-libpkcs11/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/hsm-libpkcs11)**: Cryptoki PKCS#11 v2.40 shared provider library (`.dylib`, `.so`, `.dll`) for OpenSC, OpenSSL, and OpenSSH.
+- **[`hsm-obsidian/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/hsm-obsidian)**: Centralized Obsidian documentation vault containing system architecture, ADRs, feature specifications, and session trajectories.
+- **[`hsm-yocto-offgrid-rpi/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/hsm-yocto-offgrid-rpi)**: Yocto 6.1 (Blacksail) air-gapped embedded Linux operating system for Raspberry Pi Zero 2 W / 3 / 4 / 5 with kernel hardening, nftables total drop firewall, dual-slot RAUC A/B updates, and deterministic `/dev/tty.hsm*` driver.
 
 ---
 
@@ -88,8 +88,8 @@ make worktree-rm NAME=feature-crypto
 
 ```bash
 # List all connected nRF52840 HSM dongles
-./nrf52840-hsm-cli/bin/hsmutil devices
+./hsm-cli/bin/hsmutil devices
 
 # Query specific dongle by hardware BLE address
-./nrf52840-hsm-cli/bin/hsmutil info -s FD54E793A75540C9
+./hsm-cli/bin/hsmutil info -s FD54E793A75540C9
 ```

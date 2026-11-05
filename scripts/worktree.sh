@@ -8,7 +8,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 WORKTREES_DIR="${WORKSPACE_ROOT}/.worktrees"
-SUBREPOS=(nrf52840-hsm-firmware nrf52840-hsm-cli nrf52840-hsm-obsidian nrf52840-hsm-libpkcs11 rpi-z2w-yocto-hsm)
+SUBREPOS=(hsm-ncs-firmware hsm-cli hsm-obsidian hsm-libpkcs11 hsm-yocto-offgrid-rpi)
 
 # Terminal colors
 BOLD="\033[1m"

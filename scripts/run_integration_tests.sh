@@ -6,8 +6,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-P11_DIR="${WORKSPACE_ROOT}/nrf52840-hsm-libpkcs11"
-CLI_DIR="${WORKSPACE_ROOT}/nrf52840-hsm-cli"
+P11_DIR="${WORKSPACE_ROOT}/hsm-libpkcs11"
+CLI_DIR="${WORKSPACE_ROOT}/hsm-cli"
 MOCK_PTY_PATH="/tmp/mock-hsm-pty"
 MOCK_PID=""
 

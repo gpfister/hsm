@@ -16,12 +16,12 @@ GIT_BASE_URL := https://github.com/$(GITHUB_ORG)
 endif
 
 # Sub-repositories
-SUBREPOS := nrf52840-hsm-firmware nrf52840-hsm-cli nrf52840-hsm-obsidian nrf52840-hsm-libpkcs11 rpi-z2w-yocto-hsm
-YOCTO_DIR := rpi-z2w-yocto-hsm
-FIRMWARE_DIR := nrf52840-hsm-firmware
-CLI_DIR := nrf52840-hsm-cli
-OBSIDIAN_DIR := nrf52840-hsm-obsidian
-LIBPKCS11_DIR := nrf52840-hsm-libpkcs11
+SUBREPOS := hsm-ncs-firmware hsm-cli hsm-obsidian hsm-libpkcs11 hsm-yocto-offgrid-rpi
+YOCTO_DIR := hsm-yocto-offgrid-rpi
+FIRMWARE_DIR := hsm-ncs-firmware
+CLI_DIR := hsm-cli
+OBSIDIAN_DIR := hsm-obsidian
+LIBPKCS11_DIR := hsm-libpkcs11
 CLI_BIN := $(CLI_DIR)/bin/hsmutil
 ALL_REPOS := $(SUBREPOS)
 
@@ -75,7 +75,7 @@ help:
 	@echo "  make libpkcs11-test      Run CTest unit tests for PKCS#11 provider"
 	@echo "  make libpkcs11-clean     Clean PKCS#11 build artifacts"
 	@echo ""
-	@echo "Yocto OS Targets (rpi-z2w-yocto-hsm):"
+	@echo "Yocto OS Targets (hsm-yocto-offgrid-rpi):"
 	@echo "  make yocto-build-dev     Build development OS image (hsm-image-dev) via Kas"
 	@echo "  make yocto-build-prod    Build air-gapped production OS image (hsm-image-prod) via Kas"
 	@echo "  make yocto-bundle        Build signed RAUC A/B update bundle (.raucb)"

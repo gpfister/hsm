@@ -3,6 +3,11 @@
 Thumbs.db
 
 # Sub-repositories
+/hsm-ncs-firmware/
+/hsm-cli/
+/hsm-obsidian/
+/hsm-libpkcs11/
+/hsm-yocto-offgrid-rpi/
 /nrf52840-hsm-firmware/
 /nrf52840-hsm-cli/
 /nrf52840-hsm-obsidian/
