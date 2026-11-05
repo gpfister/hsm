@@ -46,14 +46,16 @@ ncs-nrf52840dongle-kms/
   - Decoupled, pure HSM logic implementing the YubiHSM 2 protocol packet framing, command dispatch, session cryptography, and storage abstraction.
 
 ### 2.2 Host CLI & Administration Tooling (`hsm-cli`)
-- **Executable**: `hsmutil`.
-- **Framework**: Go 1.24+ with Cobra and BubbleTea following Clean Architecture.
-- **Key Capabilities**:
-  - `hsmutil firmware info`: Display active firmware version and bootloader status.
-  - `hsmutil firmware update --file <path>`: Chunked streaming upload to candidate partition slot.
-  - `hsmutil info`, `hsmutil echo`, `hsmutil auth`, `hsmutil lock`, `hsmutil reset`.
-  - `hsmutil tui`: Interactive terminal dashboard.
-- **Cross-Platform**: Builds on macOS (arm64), Linux (arm64/amd64), and Windows (arm64/amd64) via pure-Go serial I/O.
+- **Executable**: `hsmutil` (with `hsmutils` symlink).
+- **Framework**: Go 1.24+ with Cobra and Charm's Bubble Tea micro-components following Clean Architecture. Hermetic static binary compilation (`CGO_ENABLED=0`).
+- **Command Structure**:
+  - `hsmutil device <list|info|init|lock|reset|status|migrate|firmware>`: Physical device lifecycle, administration, and full-device migration.
+  - `hsmutil key <list|generate|pubkey|sign|migrate>`: Cryptographic key management and single-slot migration.
+  - `hsmutil unlock` (alias `auth`): Masked PIN prompt (`bubbles/textinput`) with headless stdin fallback.
+  - `hsmutil device firmware update --file <path>`: Chunked MCUboot streaming with animated progress (`bubbles/progress`) and headless fallback.
+  - `hsmutil echo`, `hsmutil random`, `hsmutil pkcs11` (alias `p11`).
+  - Backward compatibility: Hidden root aliases (`info`, `reset`, `lock`, `init`, `status`, `firmware`, `auth`) and convenience alias `devices -> device list`.
+- **Cross-Platform**: Builds on macOS (arm64), Linux (arm64/amd64), and Windows (arm64/amd64) with zero C dynamic library dependencies.
 
 ### 2.3 Documentation & Architecture Knowledge Vault (`hsm-obsidian`)
 - Centralized Obsidian markdown vault.

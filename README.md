@@ -7,7 +7,7 @@ Multi-repo workspace coordinating firmware, shared cryptographic libraries, host
 ## Sub-Repositories
 
 - **Embedded Firmware ([`hsm-ncs-firmware/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/hsm-ncs-firmware))**: NCS v3.4.1 / Zephyr RTOS firmware targeting the nRF52840 USB Dongle (`PCA10059`) with dual-stage secure boot (B0 + MCUboot), ARM CryptoCell CC310 hardware cryptography, dynamic BLE MAC address USB serial descriptor, and dual CDC-ACM interfaces (Console & AT protocol).
-- **Host CLI & Administration ([`hsm-cli/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/hsm-cli))**: Cross-platform Go CLI & TUI executable `hsmutil` built with Cobra and BubbleTea. Supports device autodiscovery, multi-dongle targeting (`--serial`), key management, and PKCS#11 diagnostics.
+- **Host CLI & Administration ([`hsm-cli/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/hsm-cli))**: Cross-platform Go CLI executable `hsmutil` built with Cobra and Charm's Bubble Tea micro-components (`CGO_ENABLED=0` static binary). Features resource-oriented command hierarchy (`device`, `key`), backward-compatible hidden aliases, masked PIN entry, animated DFU progress bars, multi-device disambiguation, and PKCS#11 diagnostics.
 - **PKCS#11 Cryptographic Provider ([`hsm-libpkcs11/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/hsm-libpkcs11))**: Cryptoki PKCS#11 v2.40 shared provider library (`.dylib`, `.so`, `.dll`) for OpenSC, OpenSSL, and OpenSSH.
 - **Documentation & Knowledge Vault ([`hsm-obsidian/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/hsm-obsidian))**: Centralized Obsidian documentation vault containing system architecture, ADRs, feature specifications, and session trajectories.
 - **Air-Gapped Appliance Operating System ([`hsm-yocto-offgrid-rpi/`](file:///Users/gpfister/Development/Projects/gpfister/nrf52840-hsm/hsm-yocto-offgrid-rpi))**: Yocto 6.1 (Blacksail) air-gapped embedded Linux operating system for Raspberry Pi Zero 2 W / 3 / 4 / 5 with kernel hardening, nftables total drop firewall, dual-slot RAUC A/B updates, and deterministic `/dev/tty.hsm*` driver.
@@ -23,16 +23,16 @@ Multi-repo workspace coordinating firmware, shared cryptographic libraries, host
   - `/dev/tty.usbmodem<BLE_ADDR>1`: Zephyr kernel console and logger (`cdc_acm_uart0`).
   - `/dev/tty.usbmodem<BLE_ADDR>3`: HSM AT command & crypto interface (`cdc_acm_uart1`).
 - **Multi-Device Targeting & Disambiguation**: Connect multiple HSM USB dongles concurrently without collisions.
-  - `hsmutil devices`: Enumerate all connected dongles, BLE addresses, and port paths.
+  - `hsmutil device list` (or alias `hsmutil devices`): Enumerate all connected dongles, BLE addresses, and port paths.
   - `hsmutil <command> --serial <BLE_ADDR>` (shorthand `-s`) or `--port <PATH>` (`-p`).
   - Auto-discovery safety: When multiple dongles are plugged in without targeting flags, `hsmutil` refuses ambiguous auto-discovery and returns an informative table of detected devices rather than guessing arbitrarily.
   - `export NRF52840_HSM_SERIAL=<BLE_ADDR>` for CLI and PKCS#11 provider.
 - **Factory Reset Zeroization & Safeguards**:
-  - `hsmutil reset [-y/--yes]`: Irreversible hardware factory reset zeroizing all 32 CryptoCell CC310 keys, wiping Shamir Secret Sharing master secrets from RAM and NVS, and reverting device to unconfigured state (LED breathing BLUE).
+  - `hsmutil device reset [-y/--yes]` (legacy alias: `hsmutil reset`): Irreversible hardware factory reset zeroizing all 32 CryptoCell CC310 keys, wiping Shamir Secret Sharing master secrets from RAM and NVS, and reverting device to unconfigured state (LED breathing BLUE).
   - Protected by interactive stdin confirmation prompt `(yes/no)` or `-y`/`--yes` bypass for CI/CD scripting.
 - **Firmware DFU Streaming (`AT+DFU_INFO?`, `AT+DFU_CHUNK`, `AT+DFU_APPLY`)**:
   - Native streaming DFU protocol allowing chunked firmware uploads (256 bytes per chunk) into the secondary MCUboot partition slot with 4-byte flash word boundary alignment, automatic signature validation, and deferred reboot swap.
-  - Fully integrated into `hsmutil firmware update --file <path>`.
+  - Fully integrated into `hsmutil device firmware update --file <path>` (legacy alias: `hsmutil firmware update`) with animated Bubble Tea progress bar and headless fallback.
 
 ---
 
@@ -88,8 +88,8 @@ make worktree-rm NAME=feature-crypto
 
 ```bash
 # List all connected HSM USB dongles
-./hsm-cli/bin/hsmutil devices
+./hsm-cli/bin/hsmutil device list    # or ./hsm-cli/bin/hsmutil devices
 
 # Query specific dongle by hardware BLE address
-./hsm-cli/bin/hsmutil info -s FD54E793A75540C9
+./hsm-cli/bin/hsmutil device info -s FD54E793A75540C9    # or ./hsm-cli/bin/hsmutil info
 ```
