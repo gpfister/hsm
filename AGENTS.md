@@ -19,8 +19,8 @@ ncs-nrf52840dongle-kms/
 ├── .agents/                          # Antigravity agent configuration
 │   └── plugins.json                  # References companion plugins in ../agentic/
 ├── hsm-ncs-firmware/                 # Git Repo: Zephyr / NCS firmware workspace
-├── hsm-cli/                          # Git Repo: Cross-platform Go CLI (`hsmutil`)
-├── hsm-libpkcs11/                    # Git Repo: PKCS#11 v2.40 shared library provider
+├── hsm-cli/                          # Git Repo: Cross-platform Go CLI (`gphsm` / `hsmutil`)
+├── libgphsm/                         # Git Repo: PKCS#11 v2.40 shared library provider (`libgphsm`)
 ├── hsm-obsidian/                     # Git Repo: Obsidian documentation vault
 └── hsm-yocto-offgrid-rpi/            # Git Repo: Yocto 6.1 (Blacksail) air-gapped embedded Linux OS
 ```
@@ -35,6 +35,11 @@ ncs-nrf52840dongle-kms/
 - **Secure Boot**:
   - Dual-stage: Stage 1 B0 (immutable bootloader using CC310 hardware crypto) $\rightarrow$ Stage 2 MCUboot (dual slot partition manager) $\rightarrow$ Signed Application.
   - Image signing uses root-level ECDSA P-256 keys (`keys/root-ec-p256.pem`).
+- **Dual-Mode Authentication**:
+  - Distinct keystore methods (`auth_method_t`): `NONE` (unconfigured), `PIN` (passphrase mode), `SHAMIR` (3-of-5 threshold mode).
+  - Extended PIN storage supporting up to 64 bytes with 16-byte random salt and SHA-256 hash.
+  - Status query `AT+STATUS?` exposing `CONFIGURED`, `AUTH`, `METHOD`, `RETRIES`, and `KEYCOUNT`.
+  - Mutual exclusivity between `AT+AUTH` and `AT+SHARE` enforced with CME errors 41 and 42.
 - **USB Interfaces**:
   - `cdc_acm_uart0`: Zephyr kernel console & logger (`LOG_INF`, `LOG_DBG`, `printk`).
   - `cdc_acm_uart1`: HSM binary command/response interaction channel.
@@ -46,15 +51,17 @@ ncs-nrf52840dongle-kms/
   - Decoupled, pure HSM logic implementing the YubiHSM 2 protocol packet framing, command dispatch, session cryptography, and storage abstraction.
 
 ### 2.2 Host CLI & Administration Tooling (`hsm-cli`)
-- **Executable**: `hsmutil` (with `hsmutils` symlink).
+- **Executable**: `gphsm` (with `hsmutil` and `hsmutils` symlinks).
 - **Framework**: Go 1.24+ with Cobra and Charm's Bubble Tea micro-components following Clean Architecture. Hermetic static binary compilation (`CGO_ENABLED=0`).
 - **Command Structure**:
-  - `hsmutil device <list|info|init|lock|reset|status|migrate|firmware>`: Physical device lifecycle, administration, and full-device migration.
-  - `hsmutil key <list|generate|pubkey|sign|migrate>`: Cryptographic key management and single-slot migration.
-  - `hsmutil unlock` (alias `auth`): Masked PIN prompt (`bubbles/textinput`) with headless stdin fallback.
-  - `hsmutil device firmware update --file <path>`: Chunked MCUboot streaming with animated progress (`bubbles/progress`) and headless fallback.
-  - `hsmutil echo`, `hsmutil random`, `hsmutil pkcs11` (alias `p11`).
+  - `gphsm device <list|info|init|lock|reset|status|migrate|firmware>`: Physical device lifecycle, administration, and full-device migration.
+  - `gphsm key <list|generate|pubkey|sign|migrate>`: Cryptographic key management and single-slot migration.
+  - `gphsm unlock` (alias `auth`): Masked PIN prompt (`bubbles/textinput`) with headless stdin fallback, auto-detecting PIN vs Shamir mode.
+  - `gphsm device firmware update --file <path>`: Chunked MCUboot streaming with animated progress (`bubbles/progress`) and headless fallback.
+  - `gphsm echo`, `gphsm random`.
   - Backward compatibility: Hidden root aliases (`info`, `reset`, `lock`, `init`, `status`, `firmware`, `auth`) and convenience alias `devices -> device list`.
+- **Password Quality Policy**:
+  - Embedded pure-Go `pam_pwquality` validation enforcing parity with Yocto appliance password complexity.
 - **Cross-Platform**: Builds on macOS (arm64), Linux (arm64/amd64), and Windows (arm64/amd64) with zero C dynamic library dependencies.
 
 ### 2.3 Documentation & Architecture Knowledge Vault (`hsm-obsidian`)
@@ -62,10 +69,11 @@ ncs-nrf52840dongle-kms/
 - Follows wikilink conventions (`[[Note Name]]`), YAML frontmatter (`title`, `tags`, `created`), and Mermaid architecture diagrams.
 - Stores architecture specs, protocols, session transcripts, and planning roadmaps.
 
-### 2.4 Cryptoki PKCS#11 Provider Library (`hsm-libpkcs11`)
-- **Library**: `libnrf52840_pkcs11.dylib` (macOS), `libnrf52840_pkcs11.so` (Linux), `libnrf52840_pkcs11.dll` (Windows).
+### 2.4 Cryptoki PKCS#11 Provider Library (`libgphsm`)
+- **Library**: `libgphsm.dylib` (macOS), `libgphsm.so` (Linux), `libgphsm.dll` (Windows).
 - **Standard**: Cryptoki v2.40 specification.
-- **Transport**: AT-style ASCII serial protocol communicating with dongle CDC-ACM UART1 interface (`0x1209:0x0001`) or virtual mock PTY (`/tmp/mock-hsm-pty`).
+- **Dual-Mode Authentication**: Advertises `CKF_PROTECTED_AUTHENTICATION_PATH` in Shamir mode; adapts `C_Login` to recognize external pre-authentication.
+- **Transport**: AT-style ASCII serial protocol communicating with dongle CDC-ACM UART1 interface (`0x1209:0x0001`, protocol `0x01`) or virtual mock PTY (`/tmp/mock-hsm-pty`).
 - **Cryptographic Mechanisms**: `CKM_EC_KEY_PAIR_GEN`, `CKM_ECDSA`, `CKM_ECDSA_SHA256` (SECP256R1 / prime256v1).
 - **Tooling Compatibility**: Direct compatibility with OpenSC `pkcs11-tool`, OpenSSL 3 `pkcs11-provider`, and OpenSSH.
 
@@ -81,7 +89,7 @@ ncs-nrf52840dongle-kms/
   - Production mode: strictly binds and exposes AT crypto channel (`cdc_acm_uart1`), suppressing debug logging ports.
 - **Dedicated Console User Space**:
   - Mandatory first-login wizard (password change, keyboard layout, locale) and login-time clock prompt.
-  - Auto-mount service granting `hsmutil` read/write access to external USB storage partitions.
+  - Auto-mount service granting `gphsm` read/write access to external USB storage partitions.
 
 ---
 
@@ -101,11 +109,11 @@ ncs-nrf52840dongle-kms/
 | `make firmware-build` | Builds production and debug firmware |
 | `make firmware-flash` | Programs device using J-Link `802007333` |
 | `make firmware-monitor`| Connects to firmware console USB port |
-| `make cli-build` | Builds `hsmutil` for current host |
-| `make cli-build-all` | Cross-compiles `hsmutil` for all 5 target architectures |
-| `make libpkcs11-build` | Builds PKCS#11 shared provider library via CMake |
-| `make libpkcs11-test` | Runs PKCS#11 unit and interface test suite |
-| `make libpkcs11-clean` | Cleans PKCS#11 build artifacts |
+| `make cli-build` | Builds `gphsm` for current host |
+| `make cli-build-all` | Cross-compiles `gphsm` for all 5 target architectures |
+| `make libpkcs11-build` | Builds `libgphsm` PKCS#11 shared provider library via CMake |
+| `make libpkcs11-test` | Runs `libgphsm` PKCS#11 unit and interface test suite |
+| `make libpkcs11-clean` | Cleans `libgphsm` build artifacts |
 | `make integration-test`| Runs end-to-end integration tests using virtual mock PTY |
 | `make integration-test-hw`| Runs integration tests against physical connected Dongle |
 | `make yocto-build-dev` | Builds development OS image (`hsm-image-dev`) via Kas |
