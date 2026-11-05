@@ -1,6 +1,6 @@
-# AGENTS.md — nRF52840 Dongle HSM Workspace Coordinator
+# AGENTS.md — Hardware Security Module (HSM) Workspace Coordinator
 
-Welcome to the **ncs-nrf52840dongle-kms** workspace. This repository coordinates an open-source, dual-stage secure boot Hardware Security Module (HSM) on an nRF52840 USB Dongle (`PCA10059`), compatible with the YubiHSM 2 API. It brings together firmware built with the nRF Connect SDK (NCS), a cross-platform Go CLI/TUI (`hsmutil`), an Obsidian knowledge vault, and Antigravity plugins.
+Welcome to the **HSM Workspace Coordinator**. This multi-repository workspace coordinates an open-source, dual-stage secure boot Hardware Security Module (HSM) ecosystem compatible with the YubiHSM 2 API. Target hardware implementations (such as the nRF52840 USB Dongle `PCA10059`) integrate firmware built with the nRF Connect SDK (NCS), cross-platform host CLI/TUI management tooling (`hsmutil`), Cryptoki PKCS#11 shared library providers, an air-gapped appliance OS, an Obsidian knowledge vault, and Antigravity plugins.
 
 ---
 
@@ -29,7 +29,7 @@ ncs-nrf52840dongle-kms/
 
 ## 2. Subsystem Summary
 
-### 2.1 Firmware (`hsm-ncs-firmware`)
+### 2.1 Embedded HSM Firmware (`hsm-ncs-firmware`)
 - **Framework**: nRF Connect SDK v3.4.1 / Zephyr RTOS with sysbuild.
 - **Target Board**: `nrf52840dongle/nrf52840` (`PCA10059`).
 - **Secure Boot**:
@@ -45,7 +45,7 @@ ncs-nrf52840dongle-kms/
 - **Core Library (`firmware/lib`)**:
   - Decoupled, pure HSM logic implementing the YubiHSM 2 protocol packet framing, command dispatch, session cryptography, and storage abstraction.
 
-### 2.2 CLI (`hsm-cli`)
+### 2.2 Host CLI & Administration Tooling (`hsm-cli`)
 - **Executable**: `hsmutil`.
 - **Framework**: Go 1.24+ with Cobra and BubbleTea following Clean Architecture.
 - **Key Capabilities**:
@@ -55,19 +55,19 @@ ncs-nrf52840dongle-kms/
   - `hsmutil tui`: Interactive terminal dashboard.
 - **Cross-Platform**: Builds on macOS (arm64), Linux (arm64/amd64), and Windows (arm64/amd64) via pure-Go serial I/O.
 
-### 2.3 Documentation (`hsm-obsidian`)
+### 2.3 Documentation & Architecture Knowledge Vault (`hsm-obsidian`)
 - Centralized Obsidian markdown vault.
 - Follows wikilink conventions (`[[Note Name]]`), YAML frontmatter (`title`, `tags`, `created`), and Mermaid architecture diagrams.
 - Stores architecture specs, protocols, session transcripts, and planning roadmaps.
 
-### 2.4 PKCS#11 Shared Library Provider (`hsm-libpkcs11`)
+### 2.4 Cryptoki PKCS#11 Provider Library (`hsm-libpkcs11`)
 - **Library**: `libnrf52840_pkcs11.dylib` (macOS), `libnrf52840_pkcs11.so` (Linux), `libnrf52840_pkcs11.dll` (Windows).
 - **Standard**: Cryptoki v2.40 specification.
 - **Transport**: AT-style ASCII serial protocol communicating with dongle CDC-ACM UART1 interface (`0x1209:0x0001`) or virtual mock PTY (`/tmp/mock-hsm-pty`).
 - **Cryptographic Mechanisms**: `CKM_EC_KEY_PAIR_GEN`, `CKM_ECDSA`, `CKM_ECDSA_SHA256` (SECP256R1 / prime256v1).
 - **Tooling Compatibility**: Direct compatibility with OpenSC `pkcs11-tool`, OpenSSL 3 `pkcs11-provider`, and OpenSSH.
 
-### 2.5 Air-Gapped Embedded Linux OS (`hsm-yocto-offgrid-rpi`)
+### 2.5 Air-Gapped Appliance Operating System (`hsm-yocto-offgrid-rpi`)
 - **Framework**: Yocto Project 6.1 (`blacksail`) / Linux 6.12+ (`linux-raspberrypi`).
 - **Target Hardware**: 64-bit Raspberry Pi (`raspberrypi0-2w-64`, `raspberrypi3-64`, `raspberrypi4-64`, `raspberrypi5`) with Waveshare USB HAT (B).
 - **Hardening & Isolation**:
