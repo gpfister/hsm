@@ -6,7 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-P11_DIR="${WORKSPACE_ROOT}/libgphsm"
+P11_DIR="${WORKSPACE_ROOT}/hsm-pkcs11"
 CLI_DIR="${WORKSPACE_ROOT}/hsm-cli"
 MOCK_PTY_PATH="/tmp/mock-hsm-pty"
 MOCK_PID=""

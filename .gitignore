@@ -6,6 +6,7 @@ Thumbs.db
 /hsm-ncs-firmware/
 /hsm-cli/
 /hsm-obsidian/
+/hsm-pkcs11/
 /hsm-libpkcs11/
 /libgphsm/
 /hsm-yocto-offgrid-rpi/
