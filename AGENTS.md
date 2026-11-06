@@ -1,6 +1,6 @@
 # AGENTS.md — Hardware Security Module (HSM) Workspace Coordinator
 
-Welcome to the **HSM Workspace Coordinator**. This multi-repository workspace coordinates an open-source, dual-stage secure boot Hardware Security Module (HSM) ecosystem compatible with the YubiHSM 2 API. Target hardware implementations (such as the nRF52840 USB Dongle `PCA10059`) integrate firmware built with the nRF Connect SDK (NCS), cross-platform host CLI/TUI management tooling (`hsmutil`), Cryptoki PKCS#11 shared library providers, an air-gapped appliance OS, an Obsidian knowledge vault, and Antigravity plugins.
+Welcome to the **HSM Workspace Coordinator**. This multi-repository workspace coordinates an open-source, dual-stage secure boot Hardware Security Module (HSM) ecosystem compatible with the YubiHSM 2 API. Target hardware implementations (such as the nRF52840 USB Dongle `PCA10059`) integrate firmware built with the nRF Connect SDK (NCS), cross-platform host CLI/TUI management tooling (`gphsm`), Cryptoki PKCS#11 shared library providers, an air-gapped appliance OS, an Obsidian knowledge vault, and Antigravity plugins.
 
 ---
 
@@ -19,7 +19,7 @@ ncs-nrf52840dongle-kms/
 ├── .agents/                          # Antigravity agent configuration
 │   └── plugins.json                  # References companion plugins in ../agentic/
 ├── hsm-ncs-firmware/                 # Git Repo: Zephyr / NCS firmware workspace
-├── hsm-cli/                          # Git Repo: Cross-platform Go CLI (`gphsm` / `hsmutil`)
+├── hsm-cli/                          # Git Repo: Cross-platform Go CLI (`gphsm`)
 ├── hsm-pkcs11/                       # Git Repo: PKCS#11 v2.40 shared library provider (`libgphsm`)
 ├── hsm-obsidian/                     # Git Repo: Obsidian documentation vault
 └── hsm-yocto-offgrid-rpi/            # Git Repo: Yocto 6.1 (Blacksail) air-gapped embedded Linux OS
@@ -51,8 +51,8 @@ ncs-nrf52840dongle-kms/
   - Decoupled, pure HSM logic implementing the YubiHSM 2 protocol packet framing, command dispatch, session cryptography, and storage abstraction.
 
 ### 2.2 Host CLI & Administration Tooling (`hsm-cli`)
-- **Executable**: `gphsm` (with `hsmutil` and `hsmutils` symlinks).
-- **Framework**: Go 1.24+ with Cobra and Charm's Bubble Tea micro-components following Clean Architecture. Hermetic static binary compilation (`CGO_ENABLED=0`).
+- **Executable**: `gphsm` (cross-platform CLI executable).
+- **Framework**: Go 1.24+ with Cobra and Charm's Bubble Tea micro-components following Clean Architecture. Hermetic static binary compilation (`CGO_ENABLED=0` on Linux/Windows, `CGO_ENABLED=1` on macOS).
 - **Command Structure**:
   - `gphsm device <list|info|init|lock|reset|status|migrate|firmware>`: Physical device lifecycle, administration, and full-device migration.
   - `gphsm key <list|generate|pubkey|sign|migrate>`: Cryptographic key management and single-slot migration.
