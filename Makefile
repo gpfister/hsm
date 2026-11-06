@@ -16,12 +16,12 @@ GIT_BASE_URL := https://github.com/$(GITHUB_ORG)
 endif
 
 # Sub-repositories
-SUBREPOS := hsm-ncs-firmware hsm-cli hsm-obsidian libgphsm hsm-yocto-offgrid-rpi
+SUBREPOS := hsm-ncs-firmware hsm-cli hsm-obsidian hsm-pkcs11 hsm-yocto-offgrid-rpi
 YOCTO_DIR := hsm-yocto-offgrid-rpi
 FIRMWARE_DIR := hsm-ncs-firmware
 CLI_DIR := hsm-cli
 OBSIDIAN_DIR := hsm-obsidian
-LIBPKCS11_DIR := libgphsm
+LIBPKCS11_DIR := hsm-pkcs11
 CLI_BIN := $(CLI_DIR)/bin/gphsm
 ALL_REPOS := $(SUBREPOS)
 

@@ -20,7 +20,7 @@ ncs-nrf52840dongle-kms/
 │   └── plugins.json                  # References companion plugins in ../agentic/
 ├── hsm-ncs-firmware/                 # Git Repo: Zephyr / NCS firmware workspace
 ├── hsm-cli/                          # Git Repo: Cross-platform Go CLI (`gphsm` / `hsmutil`)
-├── libgphsm/                         # Git Repo: PKCS#11 v2.40 shared library provider (`libgphsm`)
+├── hsm-pkcs11/                       # Git Repo: PKCS#11 v2.40 shared library provider (`libgphsm`)
 ├── hsm-obsidian/                     # Git Repo: Obsidian documentation vault
 └── hsm-yocto-offgrid-rpi/            # Git Repo: Yocto 6.1 (Blacksail) air-gapped embedded Linux OS
 ```
@@ -69,7 +69,7 @@ ncs-nrf52840dongle-kms/
 - Follows wikilink conventions (`[[Note Name]]`), YAML frontmatter (`title`, `tags`, `created`), and Mermaid architecture diagrams.
 - Stores architecture specs, protocols, session transcripts, and planning roadmaps.
 
-### 2.4 Cryptoki PKCS#11 Provider Library (`libgphsm`)
+### 2.4 Cryptoki PKCS#11 Provider Library (`hsm-pkcs11` / `libgphsm`)
 - **Library**: `libgphsm.dylib` (macOS), `libgphsm.so` (Linux), `libgphsm.dll` (Windows).
 - **Standard**: Cryptoki v2.40 specification.
 - **Dual-Mode Authentication**: Advertises `CKF_PROTECTED_AUTHENTICATION_PATH` in Shamir mode; adapts `C_Login` to recognize external pre-authentication.
