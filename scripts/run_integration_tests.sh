@@ -138,26 +138,90 @@ if [ -x "${CLI_BIN}" ]; then
     if "${CLI_BIN}" --help | grep "port" >/dev/null; then
         echo -e "\033[1;36m--> Testing dual-mode auth paths via gphsm...\033[0m"
 
-        # 1. Device status query
-        echo -e "  --> Executing gphsm device status against ${NRF52840_HSM_PORT}..."
+        # 1. Device reset to factory defaults
+        echo -e "  --> Resetting device via gphsm device reset -y..."
+        "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" device reset -y || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" reset -y
+        echo -e "\033[0;32m✓\033[0m gphsm device reset -y verified."
+
+        # 2. Initialize in PIN mode
+        PIN_MODE_TEST_PIN="ValidP@ssw0rd123!"
+        if ! "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" device init --mode pin --pin "${PIN_MODE_TEST_PIN}" 2>/dev/null; then
+            PIN_MODE_TEST_PIN="ValidP@s1W0rd!"
+            echo -e "  --> Initializing HSM in PIN mode via gphsm device init --mode pin --pin ValidP@ssw0rd123! (falling back to ValidP@s1W0rd! under pam_pwquality policy)..."
+            "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" device init --mode pin --pin "${PIN_MODE_TEST_PIN}"
+        else
+            echo -e "  --> Initializing HSM in PIN mode via gphsm device init --mode pin --pin ValidP@ssw0rd123!..."
+        fi
+        echo -e "\033[0;32m✓\033[0m gphsm device init --mode pin verified."
+
+        # 3. Verify status reflects CONFIGURED=1, METHOD=PIN, AUTH=0
+        echo -e "  --> Verifying status reflects CONFIGURED=1, METHOD=PIN, AUTH=0..."
+        STATUS_PIN=$(python3 -c "import os, time; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR); os.write(fd, b'AT+STATUS?\r\n'); time.sleep(0.05); print(os.read(fd, 256).decode()); os.close(fd)")
+        if echo "${STATUS_PIN}" | grep -q "CONFIGURED=1" && echo "${STATUS_PIN}" | grep -q "METHOD=PIN" && echo "${STATUS_PIN}" | grep -q "AUTH=0"; then
+            echo -e "\033[0;32m✓\033[0m Status correctly reflects CONFIGURED=1, METHOD=PIN, AUTH=0."
+        else
+            echo -e "\033[0;31m[ERROR] Unexpected status response in PIN mode: ${STATUS_PIN}\033[0m"
+            exit 1
+        fi
         "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" device status || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" status || true
 
-        # 2. Test PIN unlock path
-        echo -e "  --> Testing PIN unlock path via gphsm unlock --pin 123456..."
-        python3 -c "import os, time; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR | os.O_NONBLOCK); os.write(fd, b'AT+RESET\r\n'); time.sleep(0.05); os.write(fd, b'AT+INIT=PIN,123456\r\n'); time.sleep(0.05); os.close(fd)" 2>/dev/null || true
-        "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" unlock --pin 123456 || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" auth 123456
-        echo -e "\033[0;32m✓\033[0m gphsm unlock --pin verified."
-
-        # 3. Test Shamir mode path and mutual exclusivity
-        echo -e "  --> Testing Shamir mode path and mutual exclusivity..."
-        python3 -c "import os, time; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR | os.O_NONBLOCK); os.write(fd, b'AT+RESET\r\n'); time.sleep(0.05); os.write(fd, b'AT+INIT=SHAMIR\r\n'); time.sleep(0.05); os.close(fd)" 2>/dev/null || true
-        if "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" unlock --pin 123456 2>&1 | grep -qi "error"; then
-            echo -e "\033[0;32m✓\033[0m Mutual exclusivity verified: PIN unlock rejected in Shamir mode."
+        # 4. Verify duplicate re-initialization is rejected with ErrAlreadyConfigured (CME 41)
+        echo -e "  --> Verifying duplicate re-initialization is rejected..."
+        REINIT_OUT=$("${CLI_BIN}" --port "${NRF52840_HSM_PORT}" device init --mode pin --pin "${PIN_MODE_TEST_PIN}" 2>&1 || true)
+        if echo "${REINIT_OUT}" | grep -qi -E "41|already configured"; then
+            echo -e "\033[0;32m✓\033[0m Duplicate initialization properly rejected with ErrAlreadyConfigured (CME 41)."
+        else
+            echo -e "\033[0;31m[ERROR] Duplicate initialization was not rejected as expected: ${REINIT_OUT}\033[0m"
+            exit 1
         fi
 
-        # 4. Re-configure in PIN mode for subsequent operations
-        python3 -c "import os, time; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR | os.O_NONBLOCK); os.write(fd, b'AT+RESET\r\n'); time.sleep(0.05); os.write(fd, b'AT+INIT=PIN,123456\r\n'); time.sleep(0.05); os.close(fd)" 2>/dev/null || true
+        # 5. Unlock with gphsm unlock and verify AUTH=1
+        echo -e "  --> Unlocking device via gphsm unlock --pin ${PIN_MODE_TEST_PIN}..."
+        "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" unlock --pin "${PIN_MODE_TEST_PIN}" || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" auth "${PIN_MODE_TEST_PIN}"
+        STATUS_UNLOCKED=$(python3 -c "import os, time; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR); os.write(fd, b'AT+STATUS?\r\n'); time.sleep(0.05); print(os.read(fd, 256).decode()); os.close(fd)")
+        if echo "${STATUS_UNLOCKED}" | grep -q "AUTH=1"; then
+            echo -e "\033[0;32m✓\033[0m Authentication state verified: AUTH=1."
+        else
+            echo -e "\033[0;31m[ERROR] Expected AUTH=1 after unlock, got: ${STATUS_UNLOCKED}\033[0m"
+            exit 1
+        fi
+
+        # 6. Reset device before Shamir initialization
+        echo -e "  --> Resetting device via gphsm device reset -y before Shamir ceremony..."
+        "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" device reset -y || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" reset -y
+        echo -e "\033[0;32m✓\033[0m gphsm device reset -y verified."
+
+        # 7. Initialize in Shamir mode feeding newlines to satisfy custodian prompts
+        echo -e "  --> Initializing HSM in Shamir mode via gphsm device init --mode shamir..."
+        printf '\n\n\n\n\n\n\n\n\n\n' | "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" device init --mode shamir
+        echo -e "\033[0;32m✓\033[0m gphsm device init --mode shamir verified."
+
+        # 8. Verify status reflects CONFIGURED=1, METHOD=SHAMIR
+        echo -e "  --> Verifying status reflects CONFIGURED=1, METHOD=SHAMIR..."
+        STATUS_SHAMIR=$(python3 -c "import os, time; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR); os.write(fd, b'AT+STATUS?\r\n'); time.sleep(0.05); print(os.read(fd, 256).decode()); os.close(fd)")
+        if echo "${STATUS_SHAMIR}" | grep -q "CONFIGURED=1" && echo "${STATUS_SHAMIR}" | grep -q "METHOD=SHAMIR"; then
+            echo -e "\033[0;32m✓\033[0m Status correctly reflects CONFIGURED=1, METHOD=SHAMIR."
+        else
+            echo -e "\033[0;31m[ERROR] Unexpected status response in Shamir mode: ${STATUS_SHAMIR}\033[0m"
+            exit 1
+        fi
+
+        # 9. Verify mutual exclusivity: verify PIN unlock is rejected (CME 42 / Invalid authentication mode)
+        echo -e "  --> Verifying mutual exclusivity (PIN unlock rejected in Shamir mode)..."
+        MUTUAL_EXCL_OUT=$("${CLI_BIN}" --port "${NRF52840_HSM_PORT}" unlock --pin "${PIN_MODE_TEST_PIN}" 2>&1 || true)
+        if echo "${MUTUAL_EXCL_OUT}" | grep -qi -E "42|invalid authentication mode|shamir"; then
+            echo -e "\033[0;32m✓\033[0m Mutual exclusivity verified: PIN unlock rejected in Shamir mode."
+        else
+            echo -e "\033[0;31m[ERROR] Expected PIN unlock to be rejected in Shamir mode, got: ${MUTUAL_EXCL_OUT}\033[0m"
+            exit 1
+        fi
+
+        # 10. Re-configure in standard PIN mode for subsequent operations
+        echo -e "  --> Resetting and re-initializing in standard PIN mode for subsequent tests..."
+        "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" device reset -y || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" reset -y
+        python3 -c "import os, time; fd=os.open('${NRF52840_HSM_PORT}', os.O_RDWR | os.O_NONBLOCK); os.write(fd, b'AT+INIT=PIN,123456\r\n'); time.sleep(0.05); os.close(fd)" 2>/dev/null || true
         "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" unlock --pin 123456 || "${CLI_BIN}" --port "${NRF52840_HSM_PORT}" auth 123456
+        echo -e "\033[0;32m✓\033[0m Standard PIN mode restored."
 
         if "${CLI_BIN}" --help | grep "key" >/dev/null; then
             echo -e "\033[1;36m--> Executing gphsm key list...\033[0m"
