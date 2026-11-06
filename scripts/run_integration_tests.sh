@@ -127,9 +127,6 @@ fi
 # ------------------------------------------------------------------------------
 echo -e "\n\033[1;34m==> [Phase C] Testing gphsm CLI Tooling...\033[0m"
 CLI_BIN="${CLI_DIR}/bin/gphsm"
-if [ ! -x "${CLI_BIN}" ] && [ -x "${CLI_DIR}/bin/hsmutil" ]; then
-    CLI_BIN="${CLI_DIR}/bin/hsmutil"
-fi
 
 if [ -x "${CLI_BIN}" ]; then
     echo -e "\033[0;32m✓\033[0m Found CLI binary at: ${CLI_BIN}"
